@@ -1,0 +1,19 @@
+Checks: >
+  -*,
+  bugprone-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers
+
+WarningsAsErrors: >
+  bugprone-*,
+  modernize-use-override,
+  performance-fast-math-unreliable
+
+HeaderFilterRegex: '^.*/(src|include)/.*'
+FormatStyle: file

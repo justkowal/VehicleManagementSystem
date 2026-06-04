@@ -1,0 +1,9 @@
+build/
+.cache/
+.vscode/
+compile_commands.json
+vehicles.txt
+*.o
+*.a
+*.so
+test_notcurses.cpp
