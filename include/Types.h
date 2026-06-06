@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 
@@ -33,4 +34,18 @@ struct Truck {
     uint32_t payload_capacity_kg{0};
     double price_per_hour{0.0};
     VehicleStatus status{VehicleStatus::Available};
+};
+
+enum class RecordType : uint8_t {
+    Checkout,
+    Returned,
+    Maintenance,
+    Note
+};
+
+struct Record {
+    uint32_t vehicle_id;
+    std::chrono::system_clock::time_point timestamp;
+    RecordType type;
+    std::string details;
 };
