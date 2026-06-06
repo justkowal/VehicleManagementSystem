@@ -1,0 +1,27 @@
+{
+    "name": "Vehicle Management TUI Engine",
+    "image": "mcr.microsoft.com/devcontainers/cpp:1-debian-12",
+    "features": {
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake pkg-config libnotcurses-dev libnotcurses-core-dev clang-tidy socat",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.formatOnSave": true,
+                "C_Cpp.clang_format_style": "file",
+                "C_Cpp.clang_format_fallbackStyle": "Google",
+                "workbench.colorTheme": "Catppuccin Mocha",
+                "C_Cpp.intelliSenseEngine": "disabled"
+            },
+            "extensions": [
+                "Catppuccin.catppuccin-vsc",
+                "xaver.clang-format",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-vscode.cpptools-extension-pack",
+                "eamodio.gitlens",
+                "zaaack.markdown-editor"
+            ]
+        }
+    }
+}
