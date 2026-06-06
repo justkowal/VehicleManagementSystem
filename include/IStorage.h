@@ -5,6 +5,7 @@
 
 class IStorage {
 public:
+    IStorage() = default;
     virtual ~IStorage() = default;
     
     IStorage(const IStorage&) = delete;
