@@ -1,0 +1,3 @@
+[submodule "libs/notui"]
+	path = libs/notui
+	url = https://github.com/justkowal/notui.git
