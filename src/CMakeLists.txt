@@ -36,4 +36,4 @@ add_executable(RentalSystem
 )
 
 target_include_directories(RentalSystem PRIVATE ${CMAKE_SOURCE_DIR}/include ${NOTCURSES_INCLUDE_DIRS})
-target_link_libraries(RentalSystem PRIVATE rental_engine ${NOTCURSES_LIBRARIES})
+target_link_libraries(RentalSystem PRIVATE rental_engine notui ${NOTCURSES_LIBRARIES})
