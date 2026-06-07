@@ -19,3 +19,24 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(NOTCURSES REQUIRED notcurses)
 
 add_subdirectory(src)
+
+# --- Testing Framework (Catch2) ---
+
+set(CMAKE_CXX_CLANG_TIDY "")
+
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.5.2 
+)
+FetchContent_MakeAvailable(Catch2)
+
+file(GLOB TEST_SOURCES "${CMAKE_SOURCE_DIR}/tests/*.cpp")
+add_executable(UnitTests ${TEST_SOURCES})
+
+target_include_directories(UnitTests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(UnitTests PRIVATE rental_engine Catch2::Catch2WithMain)
+
+include(CTest)
+add_test(NAME FleetLogicTests COMMAND UnitTests)

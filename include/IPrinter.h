@@ -4,6 +4,7 @@
 
 class IPrinter {
 public:
+    IPrinter() = default;
     virtual ~IPrinter() = default;
 
     IPrinter(const IPrinter&) = delete;

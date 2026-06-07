@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vehicle.h"
+#include "Types.h"
 #include <vector>
 
 class IStorage {

@@ -1,6 +1,8 @@
 add_library(rental_engine
     Vehicle.cpp
-    FleetMgmt.cpp 
+    FleetMgmt.cpp
+    FileStorage.cpp
+    EscPosPrinter.cpp
 )
 
 target_include_directories(rental_engine PUBLIC ${CMAKE_SOURCE_DIR}/include)

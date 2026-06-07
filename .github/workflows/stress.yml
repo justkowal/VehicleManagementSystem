@@ -1,0 +1,38 @@
+name: Stress Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      stress_iters:
+        description: 'Number of stress iterations'
+        required: false
+        default: '10000'
+      concurrency_threads:
+        description: 'Number of concurrency threads'
+        required: false
+        default: '50'
+  schedule:
+    - cron: '0 2 * * *' # nightly at 02:00 UTC
+
+jobs:
+  stress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libnotcurses-dev
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build UnitTests
+        run: cmake --build build --target UnitTests -- -j
+
+      - name: Run stress tests
+        env:
+          VMS_STRESS_ITERS: ${{ github.event.inputs.stress_iters || '10000' }}
+          VMS_CONCURRENCY_THREADS: ${{ github.event.inputs.concurrency_threads || '50' }}
+        run: ./build/UnitTests -s

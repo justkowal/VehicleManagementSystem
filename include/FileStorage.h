@@ -22,9 +22,9 @@ public:
 private:
     std::string base_path_;
 
-    [[nodiscard]] auto serializeVehicle(const Vehicle& vehicle) const -> std::string;
-    [[nodiscard]] auto deserializeVehicle(const std::string& line) const -> std::optional<Vehicle>;
+    [[nodiscard]] static auto serializeVehicle(const Vehicle& vehicle) -> std::string;
+    [[nodiscard]] static auto deserializeVehicle(const std::string& line) -> std::optional<Vehicle>;
     
-    [[nodiscard]] auto serializeRecord(const Record& record) const -> std::string;
-    [[nodiscard]] auto deserializeRecord(const std::string& line) const -> std::optional<Record>;
+    [[nodiscard]] static auto serializeRecord(const Record& record) -> std::string;
+    [[nodiscard]] static auto deserializeRecord(const std::string& line) -> std::optional<Record>;
 };
