@@ -2,6 +2,7 @@
 
 #include "IStorage.h"
 #include <string>
+#include <unordered_map>
 
 class FileStorage : public IStorage {
 public:
@@ -18,6 +19,10 @@ public:
 
     auto appendRecord(const Record& record) -> void override;
     [[nodiscard]] auto getRecordRange(uint32_t vehicle_id, size_t offset, size_t limit) -> std::vector<Record> override;
+    auto deleteRecords(uint32_t vehicle_id) -> void override;
+
+    auto saveActiveRentals(const std::unordered_map<std::string, RentalSession>& rentals) -> void override;
+    [[nodiscard]] auto loadActiveRentals() -> std::unordered_map<std::string, RentalSession> override;
 
 private:
     std::string base_path_;

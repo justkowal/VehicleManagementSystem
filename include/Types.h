@@ -15,7 +15,7 @@ struct Car {
     std::string brand;
     std::string model;
     uint8_t seats{0};
-    double price_per_hour{0.0};
+    int price_per_hour{0};
     VehicleStatus status{VehicleStatus::Available};
 };
 
@@ -23,7 +23,7 @@ struct Bike {
     uint32_t id{0};
     std::string brand;
     std::string type;
-    double price_per_hour{0.0};
+    int price_per_hour{0};
     VehicleStatus status{VehicleStatus::Available};
 };
 
@@ -32,7 +32,7 @@ struct Truck {
     std::string brand;
     std::string model;
     uint32_t payload_capacity_kg{0};
-    double price_per_hour{0.0};
+    int price_per_hour{0};
     VehicleStatus status{VehicleStatus::Available};
 };
 
@@ -48,4 +48,9 @@ struct Record {
     std::chrono::system_clock::time_point timestamp;
     RecordType type;
     std::string details;
+};
+
+struct RentalSession {
+    uint32_t vehicle_id{0};
+    std::chrono::system_clock::time_point start_time;
 };

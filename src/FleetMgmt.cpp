@@ -1,16 +1,21 @@
 #include "FleetMgmt.h"
 #include "Types.h"
-#include <random>
+#include "Exceptions.h"
 #include <algorithm>
+#include <random>
 #include <stdexcept>
+#include <fstream>
+#include <cmath>
+
 
 FleetManager::FleetManager(std::unique_ptr<IStorage> storage, std::unique_ptr<IPrinter> printer,
-                         std::function<std::chrono::system_clock::time_point()> now_fn)
+                           std::function<std::chrono::system_clock::time_point()> now_fn)
     : storage_(std::move(storage)), printer_(std::move(printer)), now_fn_(std::move(now_fn)) {
     if (!storage_) {
         throw std::invalid_argument("Storage cannot be null");
     }
     fleet_ = storage_->loadFleet();
+    active_rentals_ = storage_->loadActiveRentals();
 }
 
 auto FleetManager::getFleet() const -> std::vector<Vehicle> {
@@ -31,65 +36,113 @@ auto FleetManager::getVehicle(uint32_t vehicle_id) const -> std::optional<Vehicl
 
 auto FleetManager::addVehicle(const Vehicle& vehicle) -> void {
     std::scoped_lock lock(mutex_);
-    if (std::any_of(fleet_.begin(), fleet_.end(), [&](const Vehicle& veh){ return veh.getId() == vehicle.getId(); })) {
-        throw std::runtime_error("Vehicle with this ID already exists");
+    if (std::any_of(fleet_.begin(), fleet_.end(),
+                    [&](const Vehicle& veh) { return veh.getId() == vehicle.getId(); })) {
+        throw VehicleAlreadyExistsException(vehicle.getId());
     }
-    fleet_.push_back(vehicle);
-    storage_->saveFleet(fleet_);
+    auto new_fleet = fleet_;
+    new_fleet.push_back(vehicle);
+    storage_->saveFleet(new_fleet);
+    fleet_ = std::move(new_fleet);
 }
 
-auto FleetManager::rentVehicle(uint32_t vehicle_id) -> std::optional<std::string> {
+auto FleetManager::removeVehicle(uint32_t vehicle_id) -> bool {
+    std::scoped_lock lock(mutex_);
+    auto iter = std::find_if(fleet_.begin(), fleet_.end(), [vehicle_id](const Vehicle& veh) {
+        return veh.getId() == vehicle_id;
+    });
+    if (iter == fleet_.end()) {
+        throw VehicleNotFoundException(vehicle_id);
+    }
+    if (iter->getStatus() == VehicleStatus::Rented) {
+        throw VehicleStatusException("Vehicle " + std::to_string(vehicle_id) + " is currently rented and cannot be decommissioned.");
+    }
+    auto new_fleet = fleet_;
+    auto new_iter = std::find_if(new_fleet.begin(), new_fleet.end(), [vehicle_id](const Vehicle& veh) {
+        return veh.getId() == vehicle_id;
+    });
+    new_fleet.erase(new_iter);
+    storage_->saveFleet(new_fleet);
+    storage_->deleteRecords(vehicle_id);
+    fleet_ = std::move(new_fleet);
+    return true;
+}
+
+auto FleetManager::rentVehicle(uint32_t vehicle_id, const std::string& name, const std::string& surname, const std::string& id_card, std::string* out_print_warning) -> std::optional<std::string> {
     std::string rental_code;
     std::string print_name;
     IPrinter* printer_ptr = nullptr;
+    std::chrono::system_clock::time_point checkout_time;
 
     {
         std::scoped_lock lock(mutex_);
         auto iter = std::find_if(fleet_.begin(), fleet_.end(), [vehicle_id](const Vehicle& veh) {
             return veh.getId() == vehicle_id;
         });
-        if (iter == fleet_.end() || iter->getStatus() != VehicleStatus::Available) {
-            return std::nullopt;
+        if (iter == fleet_.end()) {
+            throw VehicleNotFoundException(vehicle_id);
+        }
+        if (iter->getStatus() != VehicleStatus::Available) {
+            throw VehicleStatusException("Vehicle " + std::to_string(vehicle_id) + " is not available for rent (current status: " + iter->getStatusString() + ").");
         }
 
-        iter->setStatus(VehicleStatus::Rented);
+        auto new_fleet = fleet_;
+        auto new_iter = std::find_if(new_fleet.begin(), new_fleet.end(), [vehicle_id](const Vehicle& veh) {
+            return veh.getId() == vehicle_id;
+        });
+        new_iter->setStatus(VehicleStatus::Rented);
 
         while (true) {
             rental_code = generateRentalCode();
-            if (!active_rentals_.contains(rental_code)){
+            if (!active_rentals_.contains(rental_code)) {
                 break;
             }
         }
 
-        active_rentals_[rental_code] = {
-            .vehicle_id = vehicle_id,
-            .start_time = now_fn_()
-        };
+        checkout_time = now_fn_();
+        auto new_active_rentals = active_rentals_;
+        new_active_rentals[rental_code] = {.vehicle_id = vehicle_id, .start_time = checkout_time};
 
-        storage_->saveFleet(fleet_);
+        storage_->saveFleet(new_fleet);
+        storage_->saveActiveRentals(new_active_rentals);
 
-        Record record{
-            .vehicle_id = vehicle_id,
-            .timestamp = now_fn_(),
-            .type = RecordType::Checkout,
-            .details = "Rented with code: " + rental_code
-        };
+        std::string details = "Rented with code: " + rental_code;
+        if (!name.empty() || !surname.empty() || !id_card.empty()) {
+            details += " by " + name + " " + surname + " (ID: " + id_card + ")";
+        }
+
+        Record record{.vehicle_id = vehicle_id,
+                      .timestamp = checkout_time,
+                      .type = RecordType::Checkout,
+                      .details = details};
         storage_->appendRecord(record);
+
+        fleet_ = std::move(new_fleet);
+        active_rentals_ = std::move(new_active_rentals);
 
         if (printer_ != nullptr) {
             printer_ptr = printer_.get();
-            print_name = iter->getBrand() + " " + iter->getModelOrType();
+            print_name = new_iter->getBrand() + " " + new_iter->getModelOrType();
+        } else {
+            std::ofstream dbg("data/debug_tui.log", std::ios::app);
+            dbg << "[rentVehicle] printer_ is NULL!\n";
         }
     }
 
     if (printer_ptr != nullptr) {
-        printer_ptr->printCheckout(print_name, rental_code);
+        try {
+            printer_ptr->printCheckout(print_name, rental_code, name, surname, id_card, checkout_time);
+        } catch (const PrinterException& e) {
+            if (out_print_warning != nullptr) {
+                *out_print_warning = e.what();
+            }
+        }
     }
 
     return rental_code;
 }
 
-auto FleetManager::returnVehicle(uint32_t vehicle_id) -> bool {
+auto FleetManager::returnVehicle(uint32_t vehicle_id, int* out_cost, const std::string& notes, std::string* out_print_warning) -> bool {
     std::string found_code;
     {
         std::scoped_lock lock(mutex_);
@@ -101,61 +154,92 @@ auto FleetManager::returnVehicle(uint32_t vehicle_id) -> bool {
         }
     }
     if (found_code.empty()) {
-        return false;
+        throw VehicleStatusException("Vehicle " + std::to_string(vehicle_id) + " is not currently rented.");
     }
-    return returnVehicle(found_code);
+    return returnVehicle(found_code, out_cost, notes, out_print_warning);
 }
 
-auto FleetManager::returnVehicle(const std::string& rental_code) -> bool {
+auto FleetManager::returnVehicle(const std::string& rental_code, int* out_cost, const std::string& notes, std::string* out_print_warning) -> bool {
     IPrinter* printer_ptr = nullptr;
     std::string print_name;
-    double price_per_hour = 0.0;
+    int price_per_hour = 0;
     double hours_ceil = 0.0;
-    double total_cost = 0.0;
+    int total_cost = 0;
 
     {
         std::scoped_lock lock(mutex_);
         auto session_it = active_rentals_.find(rental_code);
         if (session_it == active_rentals_.end()) {
-            return false;
+            throw VehicleStatusException("Rental code " + rental_code + " is not active.");
         }
 
         const auto session = session_it->second;
-        auto iter = std::find_if(fleet_.begin(), fleet_.end(), [&](const Vehicle& veh){ return veh.getId() == session.vehicle_id; });
+        auto iter = std::find_if(fleet_.begin(), fleet_.end(), [&](const Vehicle& veh) {
+            return veh.getId() == session.vehicle_id;
+        });
         if (iter == fleet_.end()) {
-            return false;
+            throw VehicleNotFoundException(session.vehicle_id);
         }
 
-        iter->setStatus(VehicleStatus::Available);
+        auto new_fleet = fleet_;
+        auto new_iter = std::find_if(new_fleet.begin(), new_fleet.end(), [&](const Vehicle& veh) {
+            return veh.getId() == session.vehicle_id;
+        });
+        new_iter->setStatus(VehicleStatus::Available);
 
         auto now = now_fn_();
         std::chrono::duration<double, std::ratio<3600>> hours = now - session.start_time;
         double billable_hours = std::max(1.0, hours.count());
         hours_ceil = std::ceil(billable_hours);
-        total_cost = iter->calculateRentalCost(static_cast<uint32_t>(hours_ceil));
-        price_per_hour = iter->getPricePerHour();
+        total_cost = new_iter->calculateRentalCost(static_cast<uint32_t>(hours_ceil));
+        price_per_hour = new_iter->getPricePerHour();
+
+        if (out_cost != nullptr) {
+            *out_cost = total_cost;
+        }
 
         if (storage_) {
-            storage_->saveFleet(fleet_);
-            Record log{
-                .vehicle_id = session.vehicle_id,
-                .timestamp = now,
-                .type = RecordType::Returned,
-                .details = "Returned. Duration: " + std::to_string(billable_hours) + "h. Total: $" + std::to_string(total_cost)
-            };
+            storage_->saveFleet(new_fleet);
+            int zlotys = total_cost / 100;
+            int groszy = std::abs(total_cost % 100);
+            std::ostringstream cost_oss;
+            cost_oss << zlotys << "." << std::setw(2) << std::setfill('0') << groszy;
+            std::string details = "Returned. Duration: " + std::to_string(billable_hours) +
+                                  "h. Total: " + cost_oss.str() + " PLN";
+            if (!notes.empty()) {
+                details += ". Notes: " + notes;
+            }
+            Record log{.vehicle_id = session.vehicle_id,
+                       .timestamp = now,
+                       .type = RecordType::Returned,
+                       .details = details};
             storage_->appendRecord(log);
         }
 
-        if (printer_ != nullptr) {
-            printer_ptr = printer_.get();
-            print_name = iter->getBrand() + " " + iter->getModelOrType();
+        auto new_active_rentals = active_rentals_;
+        new_active_rentals.erase(rental_code);
+
+        if (storage_) {
+            storage_->saveActiveRentals(new_active_rentals);
         }
 
-        active_rentals_.erase(session_it);
+        fleet_ = std::move(new_fleet);
+        active_rentals_ = std::move(new_active_rentals);
+
+        if (printer_ != nullptr) {
+            printer_ptr = printer_.get();
+            print_name = new_iter->getBrand() + " " + new_iter->getModelOrType();
+        }
     }
 
     if (printer_ptr != nullptr) {
-        printer_ptr->printReturn(print_name, price_per_hour, hours_ceil, total_cost);
+        try {
+            printer_ptr->printReturn(print_name, price_per_hour, hours_ceil, total_cost);
+        } catch (const PrinterException& e) {
+            if (out_print_warning != nullptr) {
+                *out_print_warning = e.what();
+            }
+        }
     }
 
     return true;
@@ -169,7 +253,78 @@ auto FleetManager::generateRentalCode() -> std::string {
 
     std::string code = "RENT-";
     for (int i = 0; i < 6; ++i) {
-        code += alphanum[dis(gen)];
+        code += alphanum[static_cast<size_t>(dis(gen))];
     }
     return code;
+}
+
+auto FleetManager::updateVehicleStatus(uint32_t vehicle_id, VehicleStatus status, const std::string& notes) -> bool {
+    std::scoped_lock lock(mutex_);
+    auto iter = std::find_if(fleet_.begin(), fleet_.end(), [vehicle_id](const Vehicle& veh) {
+        return veh.getId() == vehicle_id;
+    });
+    if (iter == fleet_.end()) {
+        throw VehicleNotFoundException(vehicle_id);
+    }
+    auto new_fleet = fleet_;
+    auto new_iter = std::find_if(new_fleet.begin(), new_fleet.end(), [vehicle_id](const Vehicle& veh) {
+        return veh.getId() == vehicle_id;
+    });
+    new_iter->setStatus(status);
+    storage_->saveFleet(new_fleet);
+
+    RecordType rec_type = RecordType::Note;
+    std::string details;
+    if (status == VehicleStatus::Maintenance) {
+        rec_type = RecordType::Maintenance;
+        details = "Excluded from fleet: Sent to maintenance";
+    } else if (status == VehicleStatus::Available) {
+        details = "Restored: Marked fixed and available";
+    } else {
+        details = "Status changed";
+    }
+
+    if (!notes.empty()) {
+        details += ". Notes: " + notes;
+    }
+
+    Record record{.vehicle_id = vehicle_id,
+                  .timestamp = now_fn_(),
+                  .type = rec_type,
+                  .details = std::move(details)};
+    storage_->appendRecord(record);
+    fleet_ = std::move(new_fleet);
+    return true;
+}
+
+auto FleetManager::getVehicleIdByRentalCode(const std::string& rental_code) const -> std::optional<uint32_t> {
+    std::scoped_lock lock(mutex_);
+    auto iter = active_rentals_.find(rental_code);
+    if (iter != active_rentals_.end()) {
+        return iter->second.vehicle_id;
+    }
+    return std::nullopt;
+}
+
+auto FleetManager::getRentalCodeByVehicleId(uint32_t vehicle_id) const -> std::optional<std::string> {
+    std::scoped_lock lock(mutex_);
+    for (const auto& [rental_code, session] : active_rentals_) {
+        if (session.vehicle_id == vehicle_id) {
+            return rental_code;
+        }
+    }
+    return std::nullopt;
+}
+
+auto FleetManager::getRentalBilledHours(uint32_t vehicle_id) const -> std::optional<uint32_t> {
+    std::scoped_lock lock(mutex_);
+    for (const auto& [rental_code, session] : active_rentals_) {
+        if (session.vehicle_id == vehicle_id) {
+            auto now = now_fn_();
+            std::chrono::duration<double, std::ratio<3600>> hours = now - session.start_time;
+            double billable_hours = std::max(1.0, hours.count());
+            return static_cast<uint32_t>(std::ceil(billable_hours));
+        }
+    }
+    return std::nullopt;
 }

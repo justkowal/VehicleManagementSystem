@@ -1,12 +1,15 @@
 #include "FileStorage.h"
+#include "Exceptions.h"
 #include <fstream>
 #include <algorithm>
 #include <iostream>
 #include <filesystem>
 #include <sstream>
 #include <optional>
+#include <regex>
 #include <iomanip>
 #include <ctime>
+#include <cmath>
 
 namespace {
     auto splitString(const std::string& input, char delim) -> std::vector<std::string> {
@@ -58,7 +61,7 @@ FileStorage::FileStorage(std::string base_path) : base_path_(std::move(base_path
 auto FileStorage::saveFleet(const std::vector<Vehicle>& fleet) -> void {
     std::ofstream file(base_path_ + "/fleet.txt", std::ios::trunc);
     if (!file.is_open()) {
-        return;
+        throw StorageException("Failed to open fleet file for writing at: " + base_path_ + "/fleet.txt");
     }
 
     for (const auto& vehicle : fleet) {
@@ -86,9 +89,10 @@ auto FileStorage::appendRecord(const Record& record) -> void {
     std::string filepath = base_path_ + "/records/" + std::to_string(record.vehicle_id) + ".txt";
     std::ofstream file(filepath, std::ios::app);
     
-    if (file.is_open()) {
-        file << serializeRecord(record) << "\n";
+    if (!file.is_open()) {
+        throw StorageException("Failed to open record file for appending at: " + filepath);
     }
+    file << serializeRecord(record) << "\n";
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
@@ -122,6 +126,12 @@ auto FileStorage::getRecordRange(uint32_t vehicle_id, size_t offset, size_t limi
     return {it_begin, it_end};
 }
 
+auto FileStorage::deleteRecords(uint32_t vehicle_id) -> void {
+    std::error_code err;
+    const std::string filepath = base_path_ + "/records/" + std::to_string(vehicle_id) + ".txt";
+    std::filesystem::remove(filepath, err);
+}
+
 auto FileStorage::serializeVehicle(const Vehicle& vehicle) -> std::string {
     const auto& variant = vehicle.getVariant();
     return std::visit([](auto&& obj) -> std::string {
@@ -129,14 +139,14 @@ auto FileStorage::serializeVehicle(const Vehicle& vehicle) -> std::string {
         std::ostringstream oss;
         if constexpr (std::is_same_v<T, Car>) {
             oss << "Car," << obj.id << ',' << obj.brand << ',' << obj.model << ','
-                << static_cast<int>(obj.seats) << ',' << obj.price_per_hour << ','
+                << static_cast<int>(obj.seats) << ',' << (static_cast<double>(obj.price_per_hour) / 100.0) << ','
                 << static_cast<int>(obj.status);
         } else if constexpr (std::is_same_v<T, Bike>) {
             oss << "Bike," << obj.id << ',' << obj.brand << ',' << obj.type << ','
-                << obj.price_per_hour << ',' << static_cast<int>(obj.status);
+                << (static_cast<double>(obj.price_per_hour) / 100.0) << ',' << static_cast<int>(obj.status);
         } else if constexpr (std::is_same_v<T, Truck>) {
             oss << "Truck," << obj.id << ',' << obj.brand << ',' << obj.model << ','
-                << obj.payload_capacity_kg << ',' << obj.price_per_hour << ','
+                << obj.payload_capacity_kg << ',' << (static_cast<double>(obj.price_per_hour) / 100.0) << ','
                 << static_cast<int>(obj.status);
         }
         return oss.str();
@@ -158,7 +168,7 @@ auto FileStorage::deserializeVehicle(const std::string& line) -> std::optional<V
             car.brand = parts[2];
             car.model = parts[3];
             car.seats = static_cast<uint8_t>(std::stoul(parts[4]));
-            car.price_per_hour = std::stod(parts[5]);
+            car.price_per_hour = static_cast<int>(std::round(std::stod(parts[5]) * 100.0));
             car.status = static_cast<VehicleStatus>(std::stoul(parts[6]));
             return Vehicle{car};
         }
@@ -170,7 +180,7 @@ auto FileStorage::deserializeVehicle(const std::string& line) -> std::optional<V
             bike.id = static_cast<uint32_t>(std::stoul(parts[1]));
             bike.brand = parts[2];
             bike.type = parts[3];
-            bike.price_per_hour = std::stod(parts[4]);
+            bike.price_per_hour = static_cast<int>(std::round(std::stod(parts[4]) * 100.0));
             bike.status = static_cast<VehicleStatus>(std::stoul(parts[5]));
             return Vehicle{bike};
         }
@@ -183,7 +193,7 @@ auto FileStorage::deserializeVehicle(const std::string& line) -> std::optional<V
             truck_var.brand = parts[2];
             truck_var.model = parts[3];
             truck_var.payload_capacity_kg = static_cast<uint32_t>(std::stoul(parts[4]));
-            truck_var.price_per_hour = std::stod(parts[5]);
+            truck_var.price_per_hour = static_cast<int>(std::round(std::stod(parts[5]) * 100.0));
             truck_var.status = static_cast<VehicleStatus>(std::stoul(parts[6]));
             return Vehicle{truck_var};
         }
@@ -238,3 +248,79 @@ auto FileStorage::deserializeRecord(const std::string& line) -> std::optional<Re
         return std::nullopt;
     }
 }
+
+auto FileStorage::saveActiveRentals(const std::unordered_map<std::string, RentalSession>& rentals) -> void {
+    std::ofstream file(base_path_ + "/rentals.txt", std::ios::trunc);
+    if (!file.is_open()) {
+        throw StorageException("Failed to open rentals file for writing at: " + base_path_ + "/rentals.txt");
+    }
+    for (const auto& [code, session] : rentals) {
+        file << code << "," << session.vehicle_id << "," << formatTimeISO(session.start_time) << "\n";
+    }
+}
+
+auto FileStorage::loadActiveRentals() -> std::unordered_map<std::string, RentalSession> {
+    std::unordered_map<std::string, RentalSession> rentals;
+    std::ifstream file(base_path_ + "/rentals.txt");
+    if (!file.is_open()) {
+        return rentals;
+    }
+    std::string line;
+    while (std::getline(file, line)) {
+        auto parts = splitString(line, ',');
+        if (parts.size() >= 3) {
+            try {
+                RentalSession session{};
+                std::string code = parts[0];
+                session.vehicle_id = static_cast<uint32_t>(std::stoul(parts[1]));
+                if (auto time_opt = parseTimeISO(parts[2])) {
+                    session.start_time = *time_opt;
+                    rentals[code] = session;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "deserializeActiveRental parse error: " << e.what() << "\n";
+            }
+        }
+    }
+    return rentals;
+}
+
+// Self-registration — makes "file" available via --storage flag.
+// Must appear after the class definition; the macro expands to a static bool
+// that is initialised before main() runs.
+#include "StorageRegistry.h"
+REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path) -> std::optional<std::string> {
+    static const std::regex path_regex(R"(^[^\0]+$)");
+    if (path.empty() || !std::regex_match(path, path_regex)) {
+        return "Storage path cannot be empty or contain null bytes.";
+    }
+
+    namespace fs = std::filesystem;
+    std::error_code err;
+    fs::path candidate = fs::absolute(path, err);
+    if (err) {
+        return "Invalid storage path structure.";
+    }
+
+    // Find the closest existing ancestor directory
+    fs::path ancestor = candidate;
+    while (!ancestor.empty() && !fs::exists(ancestor, err)) {
+        ancestor = ancestor.parent_path();
+    }
+
+    if (ancestor.empty() || !fs::is_directory(ancestor, err)) {
+        return "Parent path is not reachable or is not a directory.";
+    }
+
+    // Verify write permission in the existing ancestor
+    const fs::path probe = ancestor / ".vms_write_test_probe";
+    {
+        std::ofstream test_file(probe);
+        if (!test_file.is_open()) {
+            return "No write permission on parent path: " + ancestor.string();
+        }
+    }
+    fs::remove(probe, err); // clean up
+
+    return std::nullopt;
+}, true);

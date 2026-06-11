@@ -17,9 +17,55 @@ TEST_CASE("addVehicle throws if storage save fails", "[storage][failure]") {
 
     FleetManager manager(std::move(storage), std::move(printer));
 
-    Car car{1, "X", "Y", 4, 5.0, VehicleStatus::Available};
+    Car car{1, "X", "Y", 4, 500, VehicleStatus::Available};
     Vehicle v(car);
 
     raw->throw_on_save = true;
     REQUIRE_THROWS_AS(manager.addVehicle(v), std::runtime_error);
+}
+
+TEST_CASE("Transactional integrity: rentVehicle rollback on storage failure", "[fleet][transaction]") {
+    auto storage = std::make_unique<MockStorage>();
+    auto* raw_storage = storage.get();
+    auto printer = std::make_unique<MockPrinter>();
+
+    FleetManager manager(std::move(storage), std::move(printer));
+
+    Car car{101, "Tesla", "Model S", 5, 2500, VehicleStatus::Available};
+    manager.addVehicle(Vehicle(car));
+
+    // Force save active rentals to fail
+    raw_storage->throw_on_save = true;
+
+    REQUIRE_THROWS_AS(manager.rentVehicle(101), std::runtime_error);
+
+    // Verify state was not committed to memory (remains Available)
+    REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Available);
+}
+
+TEST_CASE("Printer failure does not roll back database transaction", "[fleet][transaction]") {
+    auto storage = std::make_unique<MockStorage>();
+    auto* raw_storage = storage.get();
+    auto printer = std::make_unique<MockPrinter>();
+    auto* raw_printer = printer.get();
+
+    FleetManager manager(std::move(storage), std::move(printer));
+
+    Car car{101, "Tesla", "Model S", 5, 2500, VehicleStatus::Available};
+    manager.addVehicle(Vehicle(car));
+
+    // Force print to fail
+    raw_printer->throw_on_print = true;
+
+    std::string print_warning;
+    auto rental_code = manager.rentVehicle(101, "", "", "", &print_warning);
+
+    // Rental should succeed in database
+    REQUIRE(rental_code.has_value() == true);
+    REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Rented);
+    REQUIRE(raw_storage->fake_db[0].getStatus() == VehicleStatus::Rented);
+
+    // Warning should contain error message
+    REQUIRE(print_warning.empty() == false);
+    REQUIRE(print_warning.find("MockPrinter: print failure") != std::string::npos);
 }

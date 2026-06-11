@@ -16,7 +16,7 @@ TEST_CASE("Rental code generation uniqueness (basic)", "[codegen][stress]") {
         try { N = std::stoi(env); } catch(...) { N = 1000; }
     }
     for (int i = 0; i < N; ++i) {
-        Car car{static_cast<uint32_t>(1000 + i), "Brand", "Model", 4, 1.0 + (i % 10), VehicleStatus::Available};
+        Car car{static_cast<uint32_t>(1000 + i), "Brand", "Model", 4, 100 + (i % 10) * 100, VehicleStatus::Available};
         manager.addVehicle(Vehicle(car));
     }
 

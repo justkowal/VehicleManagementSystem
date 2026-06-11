@@ -49,7 +49,7 @@ auto Vehicle::getStatusString() const -> std::string {
     }, storage_);
 }
 
-auto Vehicle::getPricePerHour() const -> double {
+auto Vehicle::getPricePerHour() const -> int {
     return std::visit([](const auto& vis) { return vis.price_per_hour; }, storage_);
 }
 
@@ -57,8 +57,8 @@ auto Vehicle::setStatus(VehicleStatus new_status) -> void {
     std::visit([new_status](auto& vis) { vis.status = new_status; }, storage_);
 }
 
-auto Vehicle::calculateRentalCost(uint32_t hours) const -> double {
-    return getPricePerHour() * hours;
+auto Vehicle::calculateRentalCost(uint32_t hours) const -> int {
+    return getPricePerHour() * static_cast<int>(hours);
 }
 
 auto Vehicle::getVariant() const -> const VehicleVariant& {

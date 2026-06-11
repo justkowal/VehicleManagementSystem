@@ -13,7 +13,7 @@ TEST_CASE("Return handles negative durations from clock adjustments", "[time][an
 
     FleetManager manager(std::move(storage), std::move(printer), clock_fn);
 
-    Car car{500, "Clocky", "Shift", 2, 4.0, VehicleStatus::Available};
+    Car car{500, "Clocky", "Shift", 2, 400, VehicleStatus::Available};
     manager.addVehicle(Vehicle(car));
 
     auto code = manager.rentVehicle(500);

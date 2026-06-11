@@ -10,7 +10,7 @@ TEST_CASE("Concurrent rent attempts result in at most one success", "[concurrenc
 
     FleetManager manager(std::move(storage), std::move(printer));
 
-    Car car{101, "Fast", "Car", 2, 3.0, VehicleStatus::Available};
+    Car car{101, "Fast", "Car", 2, 300, VehicleStatus::Available};
     manager.addVehicle(Vehicle(car));
 
     std::atomic<int> success_count{0};
@@ -24,8 +24,14 @@ TEST_CASE("Concurrent rent attempts result in at most one success", "[concurrenc
     std::vector<std::thread> workers;
     for (int i = 0; i < threads; ++i) {
         workers.emplace_back([&manager, &success_count]() {
-            auto code = manager.rentVehicle(101);
-            if (code.has_value()) ++success_count;
+            try {
+                auto code = manager.rentVehicle(101);
+                if (code.has_value()) {
+                    ++success_count;
+                }
+            } catch (const std::exception&) {
+                // Ignore expected rent failures on already rented vehicles
+            }
         });
     }
 

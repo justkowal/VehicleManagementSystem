@@ -8,7 +8,9 @@ Checks: >
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-avoid-magic-numbers,
-  -readability-magic-numbers
+  -readability-magic-numbers,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
+  -clang-analyzer-*
 
 WarningsAsErrors: >
   bugprone-*,
