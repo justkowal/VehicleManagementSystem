@@ -15,7 +15,6 @@ TEST_CASE("Concurrent rent attempts result in at most one success", "[concurrenc
 
     std::atomic<int> success_count{0};
 
-    // Configurable number of parallel attempts
     int threads = 2;
     const char* env = std::getenv("VMS_CONCURRENCY_THREADS");
     if (env) {

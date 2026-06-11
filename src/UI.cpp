@@ -11,10 +11,9 @@ auto isNavigationKey(const ncinput& input) -> bool {
 
 } // namespace
 
-auto UI::setRoot(std::unique_ptr<notui::Widget> root) -> void {
+auto UI::setRoot(std::shared_ptr<notui::Widget> root) -> void {
 	root_ = std::move(root);
 	if (root_) {
-		root_->setFocusManager(&focus_manager_);
 		focus_manager_.rebuild(*root_);
 	}
 }
@@ -35,11 +34,11 @@ auto UI::dispatchInput(const ncinput& input) -> bool {
 	}
 
 	if (isMouseInput(input)) {
-		return root_->handleInput(input);
+		return root_->handle_input(input);
 	}
 
 	if (notui::Widget* focused = focus_manager_.focusedWidget(); focused != nullptr) {
-		if (focused->handleInput(input)) {
+		if (focused->handle_input(input)) {
 			return true;
 		}
 	}

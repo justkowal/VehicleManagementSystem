@@ -9,7 +9,7 @@
 
 class UI {
 public:
-	auto setRoot(std::unique_ptr<notui::Widget> root) -> void;
+	auto setRoot(std::shared_ptr<notui::Widget> root) -> void;
 	auto render() -> void;
 	auto dispatchInput(const ncinput& input) -> bool;
 
@@ -17,7 +17,7 @@ public:
 	[[nodiscard]] auto root() const -> notui::Widget* { return root_.get(); }
 
 private:
-	std::unique_ptr<notui::Widget> root_;
+	std::shared_ptr<notui::Widget> root_;
 	notui::FocusManager focus_manager_;
 
 	[[nodiscard]] static auto isMouseInput(const ncinput& input) -> bool;

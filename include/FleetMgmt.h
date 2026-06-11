@@ -47,7 +47,7 @@ private:
     std::unordered_map<std::string, RentalSession> active_rentals_;
     std::function<std::chrono::system_clock::time_point()> now_fn_;
 
-    /** coarse-grained mutex protecting fleet_ and active_rentals_ */
+    // mutex protecting fleet data
     mutable std::mutex mutex_;
 
     static auto generateRentalCode() -> std::string;

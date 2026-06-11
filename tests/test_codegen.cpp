@@ -27,6 +27,6 @@ TEST_CASE("Rental code generation uniqueness (basic)", "[codegen][stress]") {
         auto code = manager.rentVehicle(1000 + i);
         REQUIRE(code.has_value());
         auto inserted = codes.insert(code.value()).second;
-        REQUIRE(inserted == true); // no duplicate in this run
+        REQUIRE(inserted == true);
     }
 }

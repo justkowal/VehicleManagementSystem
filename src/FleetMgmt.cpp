@@ -10,7 +10,6 @@ FleetManager::FleetManager(std::unique_ptr<IStorage> storage, std::unique_ptr<IP
     if (!storage_) {
         throw std::invalid_argument("Storage cannot be null");
     }
-    // load fleet
     fleet_ = storage_->loadFleet();
 }
 
@@ -40,7 +39,6 @@ auto FleetManager::addVehicle(const Vehicle& vehicle) -> void {
 }
 
 auto FleetManager::rentVehicle(uint32_t vehicle_id) -> std::optional<std::string> {
-    // lock
     std::string rental_code;
     std::string print_name;
     IPrinter* printer_ptr = nullptr;
@@ -54,10 +52,8 @@ auto FleetManager::rentVehicle(uint32_t vehicle_id) -> std::optional<std::string
             return std::nullopt;
         }
 
-        // mark rented
         iter->setStatus(VehicleStatus::Rented);
 
-        // gen code
         while (true) {
             rental_code = generateRentalCode();
             if (!active_rentals_.contains(rental_code)){
@@ -70,7 +66,6 @@ auto FleetManager::rentVehicle(uint32_t vehicle_id) -> std::optional<std::string
             .start_time = now_fn_()
         };
 
-        // save while locked
         storage_->saveFleet(fleet_);
 
         Record record{
@@ -81,7 +76,6 @@ auto FleetManager::rentVehicle(uint32_t vehicle_id) -> std::optional<std::string
         };
         storage_->appendRecord(record);
 
-        // prepare printer
         if (printer_ != nullptr) {
             printer_ptr = printer_.get();
             print_name = iter->getBrand() + " " + iter->getModelOrType();
@@ -126,13 +120,12 @@ auto FleetManager::returnVehicle(const std::string& rental_code) -> bool {
             return false;
         }
 
-        const auto session = session_it->second; // copy
+        const auto session = session_it->second;
         auto iter = std::find_if(fleet_.begin(), fleet_.end(), [&](const Vehicle& veh){ return veh.getId() == session.vehicle_id; });
         if (iter == fleet_.end()) {
             return false;
         }
 
-        // mark available
         iter->setStatus(VehicleStatus::Available);
 
         auto now = now_fn_();
@@ -142,7 +135,6 @@ auto FleetManager::returnVehicle(const std::string& rental_code) -> bool {
         total_cost = iter->calculateRentalCost(static_cast<uint32_t>(hours_ceil));
         price_per_hour = iter->getPricePerHour();
 
-        // save
         if (storage_) {
             storage_->saveFleet(fleet_);
             Record log{
@@ -154,13 +146,11 @@ auto FleetManager::returnVehicle(const std::string& rental_code) -> bool {
             storage_->appendRecord(log);
         }
 
-        // prepare printer
         if (printer_ != nullptr) {
             printer_ptr = printer_.get();
             print_name = iter->getBrand() + " " + iter->getModelOrType();
         }
 
-        // erase rental
         active_rentals_.erase(session_it);
     }
 

@@ -7,17 +7,14 @@
 #include <chrono>
 #include <thread>
 
-// fake storage (ram)
 class MockStorage : public IStorage {
 public:
     std::vector<Vehicle> fake_db;
     std::vector<Record> fake_records;
 
-    // fail flags
     bool throw_on_load{false};
     bool throw_on_save{false};
     bool throw_on_append{false};
-    // append delay ms
     int append_delay_ms{0};
 
     std::mutex mtx;
@@ -52,7 +49,6 @@ public:
     int checkout_prints = 0;
     int return_prints = 0;
 
-    // simulate printer failure
     bool throw_on_print{false};
 
     auto printCheckout(const std::string& name, const std::string& code) -> void override {

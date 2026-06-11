@@ -8,7 +8,6 @@
 #include <iomanip>
 #include <ctime>
 
-// helpers
 namespace {
     auto splitString(const std::string& input, char delim) -> std::vector<std::string> {
         std::vector<std::string> out;
@@ -41,7 +40,7 @@ namespace {
             return std::nullopt;
         }
 #ifdef _WIN32
-    // windows: use _mkgmtime
+    // windows uses mkgmtime
     std::time_t time_t_val = _mkgmtime(&tm_struct);
 #else
         std::time_t time_t_val = timegm(&tm_struct);
@@ -53,7 +52,6 @@ namespace {
 namespace fs = std::filesystem;
 
 FileStorage::FileStorage(std::string base_path) : base_path_(std::move(base_path)) {
-    // ensure dirs
     fs::create_directories(base_path_ + "/records");
 }
 
@@ -86,7 +84,7 @@ auto FileStorage::loadFleet() -> std::vector<Vehicle> {
 
 auto FileStorage::appendRecord(const Record& record) -> void {
     std::string filepath = base_path_ + "/records/" + std::to_string(record.vehicle_id) + ".txt";
-    std::ofstream file(filepath, std::ios::app); // append
+    std::ofstream file(filepath, std::ios::app);
     
     if (file.is_open()) {
         file << serializeRecord(record) << "\n";
@@ -110,24 +108,20 @@ auto FileStorage::getRecordRange(uint32_t vehicle_id, size_t offset, size_t limi
         }
     }
 
-    // newest first
     std::reverse(all_records.begin(), all_records.end());
 
-    // paginate
     if (offset >= all_records.size()) {
         return {};
     }
     size_t end_idx = std::min(offset + limit, all_records.size());
 
-    // avoid narrowing
     using diff_t = std::vector<Record>::difference_type;
     auto it_begin = all_records.begin() + static_cast<diff_t>(offset);
     auto it_end = all_records.begin() + static_cast<diff_t>(end_idx);
 
-    return std::vector<Record>(it_begin, it_end);
+    return {it_begin, it_end};
 }
 
-// serializers
 auto FileStorage::serializeVehicle(const Vehicle& vehicle) -> std::string {
     const auto& variant = vehicle.getVariant();
     return std::visit([](auto&& obj) -> std::string {
@@ -206,7 +200,7 @@ auto FileStorage::serializeRecord(const Record& record) -> std::string {
 }
 auto FileStorage::deserializeRecord(const std::string& line) -> std::optional<Record> {
     try {
-        // parse first 3 fields; rest details
+        // parse first 3 fields, rest is details
         size_t pos1 = line.find(',');
         if (pos1 == std::string::npos) {
             return std::nullopt;

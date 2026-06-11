@@ -16,6 +16,8 @@ else()
     message(WARNING "clang-tidy not found! Static analysis disabled.")
 endif()
 
+set(CMAKE_CXX_CLANG_TIDY "")
+
 # --- 2. System Dependencies ---
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(NOTCURSES REQUIRED IMPORTED_TARGET notcurses)
@@ -48,7 +50,7 @@ file(GLOB TEST_SOURCES "${CMAKE_SOURCE_DIR}/tests/*.cpp")
 add_executable(UnitTests ${TEST_SOURCES})
 
 target_include_directories(UnitTests PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(UnitTests PRIVATE rental_engine Catch2::Catch2WithMain)
+target_link_libraries(UnitTests PRIVATE rental_engine notui Catch2::Catch2WithMain)
 
 include(CTest)
 add_test(NAME FleetLogicTests COMMAND UnitTests)

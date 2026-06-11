@@ -3,18 +3,14 @@
 #include "MockSystem.h"
 
 TEST_CASE("FleetManager Domain Logic", "[fleet]") {
-    // setup di
     auto storage = std::make_unique<MockStorage>();
     auto printer = std::make_unique<MockPrinter>();
     
-    // raw pointers
     auto* raw_storage = storage.get();
     auto* raw_printer = printer.get();
     
-    // inject
     FleetManager manager(std::move(storage), std::move(printer));
 
-    // test car
     Car test_car{101, "Toyota", "Yaris", 5, 15.0, VehicleStatus::Available};
 
     SECTION("Adding a vehicle saves it to storage immediately") {
@@ -28,38 +24,32 @@ TEST_CASE("FleetManager Domain Logic", "[fleet]") {
     SECTION("Renting a vehicle updates state and prints a receipt") {
         manager.addVehicle(Vehicle(test_car));
         
-        // exec rental
         auto rental_code = manager.rentVehicle(101);
         
-        // assert success
         REQUIRE(rental_code.has_value() == true);
         REQUIRE(rental_code->substr(0, 5) == "RENT-");
         
-        // assert domain state
         REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Rented);
         REQUIRE(raw_storage->fake_db[0].getStatus() == VehicleStatus::Rented);
         
-        // assert hardware
         REQUIRE(raw_printer->checkout_prints == 1);
-        REQUIRE(raw_storage->fake_records.size() == 1); // Checkout logged
+        REQUIRE(raw_storage->fake_records.size() == 1);
     }
 
     SECTION("Cannot rent an already rented vehicle") {
         manager.addVehicle(Vehicle(test_car));
-        manager.rentVehicle(101); // rent once
+        manager.rentVehicle(101);
         
-        // try again
         auto second_attempt = manager.rentVehicle(101);
         
         REQUIRE(second_attempt.has_value() == false);
-        REQUIRE(raw_printer->checkout_prints == 1); // Should NOT print a second time
+        REQUIRE(raw_printer->checkout_prints == 1);
     }
 
     SECTION("Returning a vehicle calculates costs and updates state") {
         manager.addVehicle(Vehicle(test_car));
         auto code = manager.rentVehicle(101);
         
-        // exec return
         bool return_success = manager.returnVehicle(code.value());
         
         REQUIRE(return_success == true);
@@ -74,7 +64,7 @@ TEST_CASE("FleetManager Domain Logic", "[fleet]") {
         bool return_success = manager.returnVehicle("AUTH-INVALID");
         
         REQUIRE(return_success == false);
-        REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Rented); // Status unchanged
-        REQUIRE(raw_printer->return_prints == 0); // Printer did not fire
+        REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Rented);
+        REQUIRE(raw_printer->return_prints == 0);
     }
 }

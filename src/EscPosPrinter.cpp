@@ -5,7 +5,6 @@
 #include <iomanip>
 
 namespace {
-    // esc/pos bytes
     const std::string ESC_INIT = std::string() + char(0x1B) + char(0x40);
     const std::string ESC_CENTER = std::string() + char(0x1B) + char(0x61) + char(0x01);
     const std::string ESC_LEFT = std::string() + char(0x1B) + char(0x61) + char(0x00);
@@ -48,20 +47,19 @@ auto EscPosPrinter::sendCommand(const std::string& payload) const -> void {
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 auto EscPosPrinter::printCheckout(const std::string& vehicle_name, const std::string& code) -> void {
     std::string payload = RECEIPT_HEADER;
-    
-    payload += ESC_CENTER;   // center
-    payload += ESC_BOLD_ON;   // bold on
+    payload += ESC_CENTER;
+    payload += ESC_BOLD_ON;
     payload += "POTWIERDZENIE WYPOZYCZENIA\n\n";
-    payload += std::string() + char(0x1B) + char(0x45) + char(0x00);   // bold off
+    payload += std::string() + char(0x1B) + char(0x45) + char(0x00);
 
-    payload += ESC_LEFT;   // left
+    payload += ESC_LEFT;
     payload += "Pojazd: " + vehicle_name + "\n\n";
     
-    payload += ESC_CENTER;   // center
+    payload += ESC_CENTER;
     payload += "KOD SZYBKIEGO ZWROTU:\n";
-    payload += ESC_DOUBLE_HW;   // double hw
+    payload += ESC_DOUBLE_HW;
     payload += code + "\n";
-    payload += ESC_NORMAL_TEXT;   // normal
+    payload += ESC_NORMAL_TEXT;
     
     payload += RECEIPT_FOOTER;
     
@@ -77,15 +75,15 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, double price_pe
     
     std::string payload = RECEIPT_HEADER;
     
-    payload += ESC_CENTER;   // center
-    payload += ESC_BOLD_ON;   // bold on
+    payload += ESC_CENTER;
+    payload += ESC_BOLD_ON;
     payload += "PARAGON FISKALNY\n\n";
-    payload += ESC_BOLD_OFF;   // bold off
+    payload += ESC_BOLD_OFF;
 
-    payload += ESC_LEFT;   // left
+    payload += ESC_LEFT;
     receipt << "Wynajem: " << vehicle_name << "\n";
     receipt << rental_duration_hours << " h x " << price_per_hour << " PLN\n";
-    receipt << "                            " << total_price << " A\n"; // tax bracket a
+    receipt << "                            " << total_price << " A\n";
     receipt << "--------------------------------\n";
 
     receipt << "SP. OPODATKOWANA A:         " << net_price << "\n";
@@ -95,16 +93,16 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, double price_pe
     
     payload += receipt.str();
     
-    payload += ESC_CENTER;   // center
-    payload += ESC_BOLD_ON;   // bold on
-    payload += ESC_DOUBLE_HW;   // double hw
+    payload += ESC_CENTER;
+    payload += ESC_BOLD_ON;
+    payload += ESC_DOUBLE_HW;
     
     std::ostringstream final_total;
     final_total << std::fixed << std::setprecision(2) << "DO ZAPLATY: " << total_price << " PLN\n";
     payload += final_total.str();
     
-    payload += ESC_NORMAL_TEXT;   // normal
-    payload += ESC_BOLD_OFF;   // bold off
+    payload += ESC_NORMAL_TEXT;
+    payload += ESC_BOLD_OFF;
 
     payload += RECEIPT_FOOTER;
     
