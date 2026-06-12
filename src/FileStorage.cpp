@@ -1,5 +1,6 @@
 #include "FileStorage.h"
 #include "Exceptions.h"
+#include "Logger.h"
 #include <fstream>
 #include <algorithm>
 #include <iostream>
@@ -198,7 +199,7 @@ auto FileStorage::deserializeVehicle(const std::string& line) -> std::optional<V
             return Vehicle{truck_var};
         }
     } catch (const std::exception& e) {
-        std::cerr << "deserializeVehicle parse error: " << e.what() << "\n";
+        LOG_ERROR("deserializeVehicle parse error: " + std::string(e.what()));
         return std::nullopt;
     }
     return std::nullopt;
@@ -244,7 +245,7 @@ auto FileStorage::deserializeRecord(const std::string& line) -> std::optional<Re
         rec.details = details;
         return rec;
     } catch (const std::exception& e) {
-        std::cerr << "deserializeRecord parse error: " << e.what() << "\n";
+        LOG_ERROR("deserializeRecord parse error: " + std::string(e.what()));
         return std::nullopt;
     }
 }
@@ -278,7 +279,7 @@ auto FileStorage::loadActiveRentals() -> std::unordered_map<std::string, RentalS
                     rentals[code] = session;
                 }
             } catch (const std::exception& e) {
-                std::cerr << "deserializeActiveRental parse error: " << e.what() << "\n";
+                LOG_ERROR("deserializeActiveRental parse error: " + std::string(e.what()));
             }
         }
     }

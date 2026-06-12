@@ -4,6 +4,7 @@
 #include "StorageRegistry.h"
 #include "UI.h"
 #include "Vehicle.h"
+#include "Logger.h"
 
 #include <cstdlib>
 #include <ctime>
@@ -22,6 +23,8 @@ auto main(int argc, char** argv) -> int {
     if (!AppPaths::resolve(argc, argv)) {
         return EXIT_FAILURE;
     }
+
+    Logger::getInstance().setLogFile((AppPaths::dataDir() / "vms.log").string());
 
     const std::string data_path    = AppPaths::dataDir().string();
     const std::string storage_name = AppPaths::storageName();
@@ -49,10 +52,10 @@ auto main(int argc, char** argv) -> int {
         UI app(manager);
         app.run();
     } catch (const std::exception& e) {
-        std::cerr << "\n[Fatal Error] System crash: " << e.what() << "\n";
+        LOG_FATAL("System crash: " + std::string(e.what()));
         return EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "\n[Fatal Error] Unknown system crash occurred.\n";
+        LOG_FATAL("Unknown system crash occurred.");
         return EXIT_FAILURE;
     }
 

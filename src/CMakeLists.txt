@@ -5,6 +5,7 @@ add_library(rental_engine OBJECT
     FileStorage.cpp
     EscPosPrinter.cpp
     AppPaths.cpp
+    Logger.cpp
 )
 
 # consumers of rental_engine inherit this include path

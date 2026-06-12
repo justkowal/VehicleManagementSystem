@@ -1,6 +1,7 @@
 #include "FleetMgmt.h"
 #include "Types.h"
 #include "Exceptions.h"
+#include "Logger.h"
 #include <algorithm>
 #include <random>
 #include <stdexcept>
@@ -124,8 +125,7 @@ auto FleetManager::rentVehicle(uint32_t vehicle_id, const std::string& name, con
             printer_ptr = printer_.get();
             print_name = new_iter->getBrand() + " " + new_iter->getModelOrType();
         } else {
-            std::ofstream dbg("data/debug_tui.log", std::ios::app);
-            dbg << "[rentVehicle] printer_ is NULL!\n";
+            LOG_WARNING("printer_ is NULL!");
         }
     }
 

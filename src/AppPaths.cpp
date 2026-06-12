@@ -1,6 +1,7 @@
 #include "AppPaths.h"
 #include "PrinterRegistry.h"
 #include "StorageRegistry.h"
+#include "Logger.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -103,9 +104,9 @@ auto AppPaths::validateAndCreate(const fs::path& path) -> bool {
 
     fs::create_directories(path / "records", err);
     if (err) {
-        std::cerr << "[Error] Data directory could not be created: " << path << "\n"
-                  << "        Reason: " << osError(err) << "\n"
-                  << "        Suggestion: Use --data-dir <path> to specify a writable location.\n";
+        LOG_ERROR("Data directory could not be created: " + path.string() + "\n"
+                  "        Reason: " + osError(err) + "\n"
+                  "        Suggestion: Use --data-dir <path> to specify a writable location.");
         return false;
     }
 
@@ -113,8 +114,8 @@ auto AppPaths::validateAndCreate(const fs::path& path) -> bool {
     {
         std::ofstream test_file(probe);
         if (!test_file.is_open()) {
-            std::cerr << "[Error] Data directory is not writable: " << path << "\n"
-                      << "        Suggestion: Use --data-dir <path> to specify a writable location.\n";
+            LOG_ERROR("Data directory is not writable: " + path.string() + "\n"
+                      "        Suggestion: Use --data-dir <path> to specify a writable location.");
             return false;
         }
     }
@@ -197,8 +198,8 @@ auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
 
         size_t eq_pos = line_view.find('=');
         if (eq_pos == std::string_view::npos) {
-            std::cerr << "[Error] Malformed line in vrs.conf:" << line_num << ": \"" << line << "\"\n"
-                      << "        Expected 'key=value'.\n";
+            LOG_ERROR("Malformed line in vrs.conf:" + std::to_string(line_num) + ": \"" + std::string(line) + "\"\n"
+                      "        Expected 'key=value'.");
             return false;
         }
 
@@ -218,7 +219,7 @@ auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
                 out_args.data_override = fs::path("data");
             }
         } else {
-            std::cerr << "[Error] Unknown configuration key in vrs.conf:" << line_num << ": \"" << key << "\"\n";
+            LOG_ERROR("Unknown configuration key in vrs.conf:" + std::to_string(line_num) + ": \"" + key + "\"");
             return false;
         }
     }
@@ -240,8 +241,8 @@ auto AppPaths::parseSingleArg(std::string_view arg,
     }
     if (arg == "--data-dir") {
         if (idx + 1 >= argc) {
-            std::cerr << "[Error] --data-dir requires a path argument.\n"
-                      << "        Example: --data-dir /home/user/fleet-data\n";
+            LOG_ERROR("--data-dir requires a path argument.\n"
+                      "        Example: --data-dir /home/user/fleet-data");
             return false;
         }
         ++idx;
@@ -257,8 +258,8 @@ auto AppPaths::parseSingleArg(std::string_view arg,
     // storage backend flag
     if (arg == "--storage") {
         if (idx + 1 >= argc) {
-            std::cerr << "[Error] --storage requires a backend name.\n"
-                      << "        Available: " << join(StorageRegistry::available(), ", ") << "\n";
+            LOG_ERROR("--storage requires a backend name.\n"
+                      "        Available: " + join(StorageRegistry::available(), ", "));
             return false;
         }
         ++idx;
@@ -274,8 +275,8 @@ auto AppPaths::parseSingleArg(std::string_view arg,
     // printer backend flags
     if (arg == "--printer") {
         if (idx + 1 >= argc) {
-            std::cerr << "[Error] --printer requires a backend name.\n"
-                      << "        Available: " << join(PrinterRegistry::available(), ", ") << "\n";
+            LOG_ERROR("--printer requires a backend name.\n"
+                      "        Available: " + join(PrinterRegistry::available(), ", "));
             return false;
         }
         ++idx;
@@ -289,8 +290,8 @@ auto AppPaths::parseSingleArg(std::string_view arg,
     }
     if (arg == "--printer-device") {
         if (idx + 1 >= argc) {
-            std::cerr << "[Error] --printer-device requires an address argument.\n"
-                      << "        Example: --printer-device 192.168.1.50:9100\n";
+            LOG_ERROR("--printer-device requires an address argument.\n"
+                      "        Example: --printer-device 192.168.1.50:9100");
             return false;
         }
         ++idx;
@@ -310,7 +311,7 @@ auto AppPaths::parseSingleArg(std::string_view arg,
 
     // unknown flag
     if (arg.starts_with("-")) {
-        std::cerr << "[Error] Unknown flag: \"" << arg << "\"\n\n";
+        LOG_ERROR("Unknown flag: \"" + std::string(arg) + "\"");
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         printHelp(argv[0], std::cerr);
         return false;
@@ -349,8 +350,8 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         args.storage_arg.empty() ? StorageRegistry::defaultName() : args.storage_arg;
 
     if (!StorageRegistry::contains(resolved_storage)) {
-        std::cerr << "[Error] Unknown storage backend: \"" << resolved_storage << "\"\n"
-                  << "        Available: " << join(StorageRegistry::available(), ", ") << "\n\n";
+        LOG_ERROR("Unknown storage backend: \"" + resolved_storage + "\"\n"
+                  "        Available: " + join(StorageRegistry::available(), ", "));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         printHelp(argv[0], std::cerr);
         return false;
@@ -361,8 +362,8 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         args.printer_arg.empty() ? PrinterRegistry::defaultName() : args.printer_arg;
 
     if (!PrinterRegistry::contains(resolved_printer)) {
-        std::cerr << "[Error] Unknown printer backend: \"" << resolved_printer << "\"\n"
-                  << "        Available: " << join(PrinterRegistry::available(), ", ") << "\n\n";
+        LOG_ERROR("Unknown printer backend: \"" + resolved_printer + "\"\n"
+                  "        Available: " + join(PrinterRegistry::available(), ", "));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         printHelp(argv[0], std::cerr);
         return false;
@@ -374,12 +375,12 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
 
     // run validations
     if (auto err_msg = StorageRegistry::validate(resolved_storage, candidate.string())) {
-        std::cerr << "[Error] " << *err_msg << "\n";
+        LOG_ERROR(*err_msg);
         return false;
     }
 
     if (auto err_msg = PrinterRegistry::validate(resolved_printer, resolved_device)) {
-        std::cerr << "[Error] " << *err_msg << "\n";
+        LOG_ERROR(*err_msg);
         return false;
     }
 
