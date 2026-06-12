@@ -779,7 +779,7 @@ auto UI::run() -> void {
 
 auto UI::build_ui() -> void {
     auto header =
-        std::make_shared<Label>("VEHICLE RENTAL & FLEET MANAGEMENT SYSTEM", Size{3, 0}, true);
+        std::make_shared<Label>("Fake rental - Fleet Management System", Size{3, 0}, true);
     header->style.bg({35, 75, 180}).fg({255, 255, 255}).frame(true, true).attr(NCSTYLE_BOLD);
     header->flex = 0;
     root_->add_child(header);
