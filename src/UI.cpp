@@ -1212,9 +1212,9 @@ auto UI::refresh_fleet_list() -> void {
 
         card->add_child(body_row);
 
-        card->on_focus_cb = [this, vehicle_id = veh.getId()](Widget*) {
+        card->on("focus", [this, vehicle_id = veh.getId()](const Event&) {
             this->select_vehicle(vehicle_id);
-        };
+        });
 
         left_list_panel_->add_child(card);
     }
