@@ -10,14 +10,46 @@
 #include <cmath>
 
 // socket includes
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/select.h>
+#endif
 
 
 namespace {
+#ifdef _WIN32
+using socket_t = SOCKET;
+constexpr socket_t INVALID_SOCKET_VAL = INVALID_SOCKET;
+inline auto close_socket(socket_t s) -> int {
+    return closesocket(s);
+}
+
+struct WinsockInit {
+    WinsockInit() {
+        WSADATA wsaData;
+        WSAStartup(MAKEWORD(2, 2), &wsaData);
+    }
+    ~WinsockInit() {
+        WSACleanup();
+    }
+};
+static void ensureWinsock() {
+    static WinsockInit init;
+}
+#else
+using socket_t = int;
+constexpr socket_t INVALID_SOCKET_VAL = -1;
+inline auto close_socket(socket_t s) -> int {
+    return ::close(s);
+}
+#endif
+
 const std::string ESC_INIT = std::string() + char(0x1B) + char(0x40);
 const std::string ESC_CENTER = std::string() + char(0x1B) + char(0x61) + char(0x01);
 const std::string ESC_LEFT = std::string() + char(0x1B) + char(0x61) + char(0x00);
@@ -69,29 +101,43 @@ auto formatMoney(int amount_grosz, const std::string& suffix = "") -> std::strin
 // tcp connect and send with 2s timeout
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& payload) -> bool {
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
+#ifdef _WIN32
+    ensureWinsock();
+#endif
+
+    socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET_VAL) {
         return false;
     }
 
     // set non-blocking
+#ifdef _WIN32
+    u_long mode = 1;
+    ioctlsocket(sock, FIONBIO, &mode);
+#else
     int flags = fcntl(sock, F_GETFL, 0); // NOLINT(cppcoreguidelines-pro-type-vararg)
     if (flags >= 0) {
         fcntl(sock, F_SETFL, flags | O_NONBLOCK); // NOLINT(cppcoreguidelines-pro-type-vararg)
     }
+#endif
 
     struct sockaddr_in serv_addr {};
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(static_cast<uint16_t>(port));
 
     if (inet_pton(AF_INET, ip_addr.c_str(), &serv_addr.sin_addr) <= 0) {
-        close(sock);
+        close_socket(sock);
         return false;
     }
 
     int res = connect(sock, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
     if (res < 0) {
+#ifdef _WIN32
+        int err_code = WSAGetLastError();
+        if (err_code == WSAEWOULDBLOCK) {
+#else
         if (errno == EINPROGRESS) {
+#endif
             fd_set fdsw;
             FD_ZERO(&fdsw); // NOLINT(hicpp-no-assembler,cppcoreguidelines-pro-bounds-array-to-pointer-decay)
             FD_SET(sock, &fdsw); // NOLINT(hicpp-no-assembler,cppcoreguidelines-pro-bounds-array-to-pointer-decay)
@@ -100,11 +146,16 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
             timeout_val.tv_sec = 2; // 2s timeout
             timeout_val.tv_usec = 0;
 
-            res = select(sock + 1, nullptr, &fdsw, nullptr, &timeout_val);
+            res = select(static_cast<int>(sock) + 1, nullptr, &fdsw, nullptr, &timeout_val);
             if (res > 0) {
                 int err = 0;
+#ifdef _WIN32
+                int len = sizeof(err);
+                if (getsockopt(sock, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&err), &len) == 0 && err == 0) {
+#else
                 socklen_t len = sizeof(err);
                 if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len) == 0 && err == 0) {
+#endif
                     res = 0; // success
                 } else {
                     res = -1; // failed
@@ -119,15 +170,24 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
 
     if (res == 0) {
         // set blocking
+#ifdef _WIN32
+        u_long mode = 0;
+        ioctlsocket(sock, FIONBIO, &mode);
+#else
         if (flags >= 0) {
             fcntl(sock, F_SETFL, flags); // NOLINT(cppcoreguidelines-pro-type-vararg)
         }
+#endif
+#ifdef _WIN32
+        send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
+#else
         send(sock, payload.c_str(), payload.size(), 0);
-        close(sock);
+#endif
+        close_socket(sock);
         return true;
     }
 
-    close(sock);
+    close_socket(sock);
     return false;
 }
 } // namespace

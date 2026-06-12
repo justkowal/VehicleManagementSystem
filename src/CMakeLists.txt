@@ -35,46 +35,53 @@ target_compile_options(rental_engine PRIVATE
 
 enable_clang_tidy(rental_engine)
 
-# RentalSystem main application
-add_executable(RentalSystem
-    main.cpp
-    UI.cpp
-)
+if(WIN32)
+    target_link_libraries(rental_engine PUBLIC ws2_32)
+endif()
 
-target_include_directories(RentalSystem PRIVATE
-    "${CMAKE_SOURCE_DIR}/include"
-)
 
-target_link_libraries(RentalSystem PRIVATE
-    rental_engine
-    notui
-    PkgConfig::NOTCURSES
-)
+if(NOTCURSES_FOUND)
+    # RentalSystem main application
+    add_executable(RentalSystem
+        main.cpp
+        UI.cpp
+    )
 
-target_compile_options(RentalSystem PRIVATE
-    $<$<CONFIG:Debug>:
-        -Wall
-        -Wextra
-        -Wshadow
-    >
-    $<$<CONFIG:Release>:
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wconversion
-        -Wshadow
-        -Wformat=2
-        -Wnon-virtual-dtor
-        -Wold-style-cast
-        -Werror
-    >
-)
+    target_include_directories(RentalSystem PRIVATE
+        "${CMAKE_SOURCE_DIR}/include"
+    )
 
-enable_clang_tidy(RentalSystem)
+    target_link_libraries(RentalSystem PRIVATE
+        rental_engine
+        notui
+        PkgConfig::NOTCURSES
+    )
 
-# demo_notui developer demo
-add_executable(demo_notui
-    demo_notui.cpp
-)
+    target_compile_options(RentalSystem PRIVATE
+        $<$<CONFIG:Debug>:
+            -Wall
+            -Wextra
+            -Wshadow
+        >
+        $<$<CONFIG:Release>:
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wshadow
+            -Wformat=2
+            -Wnon-virtual-dtor
+            -Wold-style-cast
+            -Werror
+        >
+    )
 
-target_link_libraries(demo_notui PRIVATE notui)
+    enable_clang_tidy(RentalSystem)
+
+    # demo_notui developer demo
+    add_executable(demo_notui
+        demo_notui.cpp
+    )
+
+    target_link_libraries(demo_notui PRIVATE notui)
+endif()

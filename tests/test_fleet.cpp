@@ -7,9 +7,20 @@
 #include <cstdio>
 #include <thread>
 #include <chrono>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+inline auto close_socket(SOCKET s) -> int {
+    return closesocket(s);
+}
+#else
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+inline auto close_socket(int s) -> int {
+    return ::close(s);
+}
+#endif
 
 TEST_CASE("FleetManager Domain Logic", "[fleet]") {
     auto storage = std::make_unique<MockStorage>();
@@ -149,38 +160,76 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
 
 // mock tcp server
 static void run_mock_printer_server(int port, std::string& out_received) {
+#ifdef _WIN32
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    SOCKET server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == INVALID_SOCKET) {
+        WSACleanup();
+        return;
+    }
+#else
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) return;
+#endif
 
+#ifdef _WIN32
+    char opt = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#else
     int opt = 1;
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#endif
 
     struct sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = inet_addr("127.0.0.1");
-    address.sin_port = htons(port);
+    address.sin_port = htons(static_cast<u_short>(port));
 
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        close(server_fd);
+        close_socket(server_fd);
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return;
     }
 
     if (listen(server_fd, 1) < 0) {
-        close(server_fd);
+        close_socket(server_fd);
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return;
     }
 
+#ifdef _WIN32
     int addrlen = sizeof(address);
-    int new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+    SOCKET new_socket = accept(server_fd, (struct sockaddr*)&address, &addrlen);
+    if (new_socket != INVALID_SOCKET) {
+        char buffer[4096] = {0};
+        int valread = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
+        if (valread > 0) {
+            out_received = std::string(buffer, static_cast<size_t>(valread));
+        }
+        close_socket(new_socket);
+    }
+#else
+    socklen_t addrlen = sizeof(address);
+    int new_socket = accept(server_fd, (struct sockaddr*)&address, &addrlen);
     if (new_socket >= 0) {
         char buffer[4096] = {0};
         int valread = read(new_socket, buffer, sizeof(buffer) - 1);
         if (valread > 0) {
-            out_received = std::string(buffer, valread);
+            out_received = std::string(buffer, static_cast<size_t>(valread));
         }
-        close(new_socket);
+        close_socket(new_socket);
     }
-    close(server_fd);
+#endif
+
+    close_socket(server_fd);
+#ifdef _WIN32
+    WSACleanup();
+#endif
 }
 
 TEST_CASE("EscPosPrinter network transmission and socket mode", "[printer][network]") {
