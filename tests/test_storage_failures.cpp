@@ -37,7 +37,7 @@ TEST_CASE("Transactional integrity: rentVehicle rollback on storage failure", "[
     // force save active rentals to fail
     raw_storage->throw_on_save = true;
 
-    REQUIRE_THROWS_AS(manager.rentVehicle(101), std::runtime_error);
+    REQUIRE_THROWS_AS(manager.rentVehicle(101, "John", "Doe", "AB123456"), std::runtime_error);
 
     // verify state not committed
     REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Available);
@@ -58,7 +58,7 @@ TEST_CASE("Printer failure does not roll back database transaction", "[fleet][tr
     raw_printer->throw_on_print = true;
 
     std::string print_warning;
-    auto rental_code = manager.rentVehicle(101, "", "", "", &print_warning);
+    auto rental_code = manager.rentVehicle(101, "John", "Doe", "AB123456", &print_warning);
 
     // rental should succeed in db
     REQUIRE(rental_code.has_value() == true);

@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "Vehicle.h"
 #include "Types.h"
+#include "Exceptions.h"
 
 TEST_CASE("Vehicle basic behavior and cost calculation", "[vehicle]") {
     Car car{42, "TestBrand", "ModelX", 4, 1000, VehicleStatus::Available};
@@ -23,11 +24,10 @@ TEST_CASE("Vehicle basic behavior and cost calculation", "[vehicle]") {
         REQUIRE(v.getStatus() == VehicleStatus::Maintenance);
     }
 
-    SECTION("Negative price behaves predictably") {
+    SECTION("Negative price throws ValidationException") {
         Car cheap = car;
         cheap.price_per_hour = -500;
-        Vehicle neg(cheap);
-        REQUIRE(neg.calculateRentalCost(2) == -1000);
+        REQUIRE_THROWS_AS(Vehicle(cheap), ValidationException);
     }
 }
 

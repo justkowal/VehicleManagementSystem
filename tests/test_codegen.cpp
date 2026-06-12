@@ -24,7 +24,7 @@ TEST_CASE("Rental code generation uniqueness (basic)", "[codegen][stress]") {
     codes.reserve(N);
 
     for (int i = 0; i < N; ++i) {
-        auto code = manager.rentVehicle(1000 + i);
+        auto code = manager.rentVehicle(1000 + i, "John", "Doe", "AB123456");
         REQUIRE(code.has_value());
         auto inserted = codes.insert(code.value()).second;
         REQUIRE(inserted == true);

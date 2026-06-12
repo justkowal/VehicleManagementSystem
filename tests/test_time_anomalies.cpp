@@ -16,7 +16,7 @@ TEST_CASE("Return handles negative durations from clock adjustments", "[time][an
     Car car{500, "Clocky", "Shift", 2, 400, VehicleStatus::Available};
     manager.addVehicle(Vehicle(car));
 
-    auto code = manager.rentVehicle(500);
+    auto code = manager.rentVehicle(500, "John", "Doe", "AB123456");
     REQUIRE(code.has_value());
 
     // move clock back 2h

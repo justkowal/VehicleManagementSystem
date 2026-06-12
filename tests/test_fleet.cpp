@@ -33,7 +33,7 @@ TEST_CASE("FleetManager Domain Logic", "[fleet]") {
     SECTION("Renting a vehicle updates state and prints a receipt") {
         manager.addVehicle(Vehicle(test_car));
         
-        auto rental_code = manager.rentVehicle(101);
+        auto rental_code = manager.rentVehicle(101, "John", "Doe", "AB123456");
         
         REQUIRE(rental_code.has_value() == true);
         REQUIRE(rental_code->substr(0, 5) == "RENT-");
@@ -47,15 +47,15 @@ TEST_CASE("FleetManager Domain Logic", "[fleet]") {
 
     SECTION("Cannot rent an already rented vehicle") {
         manager.addVehicle(Vehicle(test_car));
-        manager.rentVehicle(101);
+        manager.rentVehicle(101, "John", "Doe", "AB123456");
         
-        REQUIRE_THROWS_AS(manager.rentVehicle(101), VehicleStatusException);
+        REQUIRE_THROWS_AS(manager.rentVehicle(101, "John", "Doe", "AB123456"), VehicleStatusException);
         REQUIRE(raw_printer->checkout_prints == 1);
     }
 
     SECTION("Returning a vehicle calculates costs and updates state") {
         manager.addVehicle(Vehicle(test_car));
-        auto code = manager.rentVehicle(101);
+        auto code = manager.rentVehicle(101, "John", "Doe", "AB123456");
         
         bool return_success = manager.returnVehicle(code.value());
         
@@ -66,9 +66,9 @@ TEST_CASE("FleetManager Domain Logic", "[fleet]") {
 
     SECTION("Returning with an invalid code fails gracefully") {
         manager.addVehicle(Vehicle(test_car));
-        manager.rentVehicle(101);
+        manager.rentVehicle(101, "John", "Doe", "AB123456");
         
-        REQUIRE_THROWS_AS(manager.returnVehicle("AUTH-INVALID"), VehicleStatusException);
+        REQUIRE_THROWS_AS(manager.returnVehicle("RENT-NONEXS"), VehicleStatusException);
         REQUIRE(manager.getVehicle(101)->getStatus() == VehicleStatus::Rented);
         REQUIRE(raw_printer->return_prints == 0);
     }
@@ -90,7 +90,7 @@ TEST_CASE("FleetManager Domain Logic", "[fleet]") {
 
     SECTION("Decommissioning a rented vehicle is blocked") {
         manager.addVehicle(Vehicle(test_car));
-        auto rental_code = manager.rentVehicle(101);
+        auto rental_code = manager.rentVehicle(101, "John", "Doe", "AB123456");
         REQUIRE(rental_code.has_value() == true);
 
         REQUIRE_THROWS_AS(manager.removeVehicle(101), VehicleStatusException);

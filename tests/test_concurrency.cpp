@@ -25,7 +25,7 @@ TEST_CASE("Concurrent rent attempts result in at most one success", "[concurrenc
     for (int i = 0; i < threads; ++i) {
         workers.emplace_back([&manager, &success_count]() {
             try {
-                auto code = manager.rentVehicle(101);
+                auto code = manager.rentVehicle(101, "John", "Doe", "AB123456");
                 if (code.has_value()) {
                     ++success_count;
                 }
