@@ -81,6 +81,7 @@ add_executable(UnitTests
     tests/test_notui.cpp
     tests/test_storage_failures.cpp
     tests/test_time_anomalies.cpp
+    tests/test_validation.cpp
 )
 
 target_include_directories(UnitTests PRIVATE

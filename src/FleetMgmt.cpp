@@ -8,6 +8,62 @@
 #include <fstream>
 #include <cmath>
 
+namespace {
+bool isAlphaSpaceOnly(const std::string& s) {
+    if (s.empty()) return false;
+    for (char c : s) {
+        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == ' ')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isAlnumOnly(const std::string& s) {
+    if (s.empty()) return false;
+    for (char c : s) {
+        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+void validateCustomerDetails(const std::string& name, const std::string& surname, const std::string& id_card) {
+    if (!isAlphaSpaceOnly(name)) {
+        throw ValidationException("Renter name must be non-empty and contain only letters and spaces.");
+    }
+    if (!isAlphaSpaceOnly(surname)) {
+        throw ValidationException("Renter surname must be non-empty and contain only letters and spaces.");
+    }
+    if (!isAlnumOnly(id_card)) {
+        throw ValidationException("Renter ID card number must be non-empty and contain only alphanumeric characters.");
+    }
+}
+
+void validateNotes(const std::string& notes) {
+    if (notes.empty()) return;
+    for (char c : notes) {
+        if (c < 32 || c > 126 || c == ',') {
+            throw ValidationException("Notes cannot contain commas, newlines, or non-printable characters.");
+        }
+    }
+}
+
+bool isValidRentalCode(const std::string& code) {
+    if (code.length() != 11) return false;
+    if (code.substr(0, 5) != "RENT-") return false;
+    for (int i = 5; i < 11; ++i) {
+        char c = code[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'))) {
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
+
 
 FleetManager::FleetManager(std::unique_ptr<IStorage> storage, std::unique_ptr<IPrinter> printer,
                            std::function<std::chrono::system_clock::time_point()> now_fn)
@@ -70,6 +126,8 @@ auto FleetManager::removeVehicle(uint32_t vehicle_id) -> bool {
 }
 
 auto FleetManager::rentVehicle(uint32_t vehicle_id, const std::string& name, const std::string& surname, const std::string& id_card, std::string* out_print_warning) -> std::optional<std::string> {
+    validateCustomerDetails(name, surname, id_card);
+
     std::string rental_code;
     std::string print_name;
     IPrinter* printer_ptr = nullptr;
@@ -160,6 +218,15 @@ auto FleetManager::returnVehicle(uint32_t vehicle_id, int* out_cost, const std::
 }
 
 auto FleetManager::returnVehicle(const std::string& rental_code, int* out_cost, const std::string& notes, std::string* out_print_warning) -> bool {
+    std::string clean_code = rental_code;
+    for (char& c : clean_code) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    if (!isValidRentalCode(clean_code)) {
+        throw ValidationException("Invalid rental code format. Must be RENT-XXXXXX.");
+    }
+    validateNotes(notes);
+
     IPrinter* printer_ptr = nullptr;
     std::string print_name;
     int price_per_hour = 0;
@@ -168,9 +235,9 @@ auto FleetManager::returnVehicle(const std::string& rental_code, int* out_cost, 
 
     {
         std::scoped_lock lock(mutex_);
-        auto session_it = active_rentals_.find(rental_code);
+        auto session_it = active_rentals_.find(clean_code);
         if (session_it == active_rentals_.end()) {
-            throw VehicleStatusException("Rental code " + rental_code + " is not active.");
+            throw VehicleStatusException("Rental code " + clean_code + " is not active.");
         }
 
         const auto session = session_it->second;
@@ -217,7 +284,7 @@ auto FleetManager::returnVehicle(const std::string& rental_code, int* out_cost, 
         }
 
         auto new_active_rentals = active_rentals_;
-        new_active_rentals.erase(rental_code);
+        new_active_rentals.erase(clean_code);
 
         if (storage_) {
             storage_->saveActiveRentals(new_active_rentals);
@@ -259,6 +326,7 @@ auto FleetManager::generateRentalCode() -> std::string {
 }
 
 auto FleetManager::updateVehicleStatus(uint32_t vehicle_id, VehicleStatus status, const std::string& notes) -> bool {
+    validateNotes(notes);
     std::scoped_lock lock(mutex_);
     auto iter = std::find_if(fleet_.begin(), fleet_.end(), [vehicle_id](const Vehicle& veh) {
         return veh.getId() == vehicle_id;

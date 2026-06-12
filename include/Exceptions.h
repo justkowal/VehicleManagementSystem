@@ -35,3 +35,9 @@ class VehicleStatusException : public RentalSystemException {
 public:
     explicit VehicleStatusException(const std::string& msg) : RentalSystemException(msg) {}
 };
+
+class ValidationException : public RentalSystemException {
+public:
+    explicit ValidationException(const std::string& msg) : RentalSystemException("Validation Error: " + msg) {}
+};
+
