@@ -30,7 +30,7 @@ TEST_CASE("Concurrent rent attempts result in at most one success", "[concurrenc
                     ++success_count;
                 }
             } catch (const std::exception&) {
-                // Ignore expected rent failures on already rented vehicles
+                // ignore expected rent failures on already rented vehicles
             }
         });
     }

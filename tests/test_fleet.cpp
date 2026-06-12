@@ -105,7 +105,7 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
 
     {
         EscPosPrinter printer(test_file);
-        // Create a fixed local timestamp
+        // create fixed local timestamp
         std::tm tm_struct{};
         tm_struct.tm_year = 126; // 2026
         tm_struct.tm_mon = 5;    // June
@@ -126,21 +126,20 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
     file.close();
     std::remove(test_file.c_str());
 
-    // Verify renter details and timestamp exist in the receipt
+    // verify renter details and timestamp
     REQUIRE(content.find("Najemca: Jan Kowalski\n") != std::string::npos);
     REQUIRE(content.find("ID: XYZ123456\n") != std::string::npos);
     REQUIRE(content.find("Data: 2026-06-11 22:30:15\n") != std::string::npos);
 
-    // Verify ESC_DISABLE_HRI is in the output: 1D 48 00
+    // verify esc_disable_hri
     std::string expected_disable_hri = std::string() + char(0x1D) + char(0x48) + char(0x00);
     REQUIRE(content.find(expected_disable_hri) != std::string::npos);
 
-    // Verify barcode command: GS k 69 [len] "RENT-ABCD12"
-    // GS k is 1D 6B, 69 is 0x45, len is 11 (0x0B)
+    // verify barcode command
     std::string expected_barcode = std::string() + char(0x1D) + char(0x6B) + char(69) + char(11) + "RENT-ABCD12";
     REQUIRE(content.find(expected_barcode) != std::string::npos);
 
-    // Verify the barcode is printed after "RENT-ABCD12" text (the alphanumeric representation)
+    // verify barcode is printed after text
     size_t text_pos = content.find("RENT-ABCD12");
     REQUIRE(text_pos != std::string::npos);
     size_t barcode_pos = content.find(expected_barcode);
@@ -148,7 +147,7 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
     REQUIRE(barcode_pos > text_pos);
 }
 
-// Mock TCP server thread function for testing EscPosPrinter networking
+// mock tcp server
 static void run_mock_printer_server(int port, std::string& out_received) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) return;
@@ -188,10 +187,10 @@ TEST_CASE("EscPosPrinter network transmission and socket mode", "[printer][netwo
     std::string received;
     int port = 59123;
     
-    // Launch mock server in a separate thread
+    // launch mock server
     std::thread server_thread(run_mock_printer_server, port, std::ref(received));
     
-    // Give the server thread a brief moment to start listening
+    // let server start
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     {
@@ -201,12 +200,12 @@ TEST_CASE("EscPosPrinter network transmission and socket mode", "[printer][netwo
 
     server_thread.join();
 
-    // Verify network payload content
+    // verify network payload
     REQUIRE(received.empty() == false);
     REQUIRE(received.find("Ducati Monster") != std::string::npos);
     REQUIRE(received.find("RENT-MOCK99") != std::string::npos);
 
-    // Verify that printReturn network transmission works as well
+    // verify printreturn network transmission
     std::string return_received;
     std::thread return_server_thread(run_mock_printer_server, port, std::ref(return_received));
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -241,7 +240,7 @@ TEST_CASE("FleetManager searchFleet across all fields", "[fleet][search]") {
     manager.addVehicle(Vehicle(bike));
     manager.addVehicle(Vehicle(truck));
 
-    // Test helper to match similar logic as UI search
+    // test helper for ui search logic
     auto search_func = [&](const std::string& query) {
         std::string search_query = query;
         std::transform(search_query.begin(), search_query.end(), search_query.begin(),

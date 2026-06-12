@@ -1,4 +1,4 @@
-build/
+build*/
 .cache/
 .vscode/
 compile_commands.json
@@ -7,3 +7,5 @@ vehicles.txt
 *.a
 *.so
 test_notcurses.cpp
+*data/
+*install/

@@ -86,7 +86,7 @@ TEST_CASE("FileStorage serialization and deserialization of Bike and Truck varia
     auto loaded = storage.loadFleet();
     REQUIRE(loaded.size() == 2);
 
-    // Check Bike loading
+    // check bike loading
     REQUIRE(loaded[0].getId() == 12);
     REQUIRE(loaded[0].getBrand() == "Trek");
     REQUIRE(loaded[0].getModelOrType() == "Hybrid");
@@ -94,7 +94,7 @@ TEST_CASE("FileStorage serialization and deserialization of Bike and Truck varia
     REQUIRE(loaded[0].getPricePerHour() == 1000);
     REQUIRE(loaded[0].getStatus() == VehicleStatus::Available);
 
-    // Check Truck loading
+    // check truck loading
     REQUIRE(loaded[1].getId() == 22);
     REQUIRE(loaded[1].getBrand() == "Volvo");
     REQUIRE(loaded[1].getModelOrType() == "FH16");
@@ -119,21 +119,21 @@ TEST_CASE("FileStorage active rentals parsing robustness and error handling", "[
     tmp_dir += std::to_string(std::hash<std::string>{}(tmp_dir.string()));
     fs::create_directories(tmp_dir);
 
-    // Write a corrupted/malformed rentals.txt file
+    // write malformed rentals.txt
     {
         std::ofstream f(tmp_dir / "rentals.txt", std::ios::trunc);
         f << "RENT-MALFORMED,non_numeric_id,2026-06-11T19:00:00Z\n"
           << "RENT-VALID,305,2026-06-11T19:30:00Z\n"
-          << "RENT-SHORT,101\n"; // Too few parameters, should be skipped
+          << "RENT-SHORT,101\n"; // too few parameters
     }
 
     FileStorage storage(tmp_dir.string());
     
-    // Call loadActiveRentals, verifying it does not crash
+    // call loadactiverentals
     std::unordered_map<std::string, RentalSession> active_rentals;
     REQUIRE_NOTHROW(active_rentals = storage.loadActiveRentals());
 
-    // Verify only the valid rental session is returned
+    // verify only valid session returned
     REQUIRE(active_rentals.size() == 1);
     REQUIRE(active_rentals.contains("RENT-VALID") == true);
     REQUIRE(active_rentals["RENT-VALID"].vehicle_id == 305);

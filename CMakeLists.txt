@@ -7,36 +7,28 @@ project(
     LANGUAGES CXX
 )
 
-# ---------------------------------------------------------------------------
-# Global language standard — must be set before any target definitions
-# ---------------------------------------------------------------------------
+# global language standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Always emit compile_commands.json (used by clang-tidy, clangd, etc.)
+# compile_commands.json for clangd/tidy
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Set the default build type if none was specified.
-# Users can select the build type from standard options (Debug, Release, RelWithDebInfo, MinSizeRel)
-# by setting -DCMAKE_BUILD_TYPE on the command line or choosing from the IDE list.
+# default build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
     message(STATUS "Build type not specified — defaulting to Release")
 endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 
-# Route all compiled executables to build/bin/ for a clean layout
+# route binaries to bin/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-# ---------------------------------------------------------------------------
-# Install support — standard directory variables (bindir, datadir, etc.)
-# ---------------------------------------------------------------------------
+# install support
 include(GNUInstallDirs)
 
-# ---------------------------------------------------------------------------
-# FetchContent — declared early so subdirectories can depend on it
-# ---------------------------------------------------------------------------
+# fetch dependencies
 include(FetchContent)
 
 FetchContent_Declare(
@@ -46,20 +38,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Catch2)
 
-# Suppress clang-tidy for FetchContent deps: write a local .clang-tidy
-# that disables all checks. clang-tidy resolves config by walking up the
-# directory tree, so this file takes precedence for anything under _deps/.
+# disable clang-tidy on fetchcontent dependencies
 file(WRITE "${CMAKE_BINARY_DIR}/_deps/.clang-tidy" "Checks: '-*'\n")
 
-# ---------------------------------------------------------------------------
-# System dependencies
-# ---------------------------------------------------------------------------
+# system dependencies
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(NOTCURSES REQUIRED IMPORTED_TARGET notcurses)
 
-# ---------------------------------------------------------------------------
-# Static analysis — discover clang-tidy once, apply per-target below
-# ---------------------------------------------------------------------------
+# static analysis
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 if(CLANG_TIDY_EXE)
     message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
@@ -67,30 +53,25 @@ else()
     message(STATUS "clang-tidy not found — static analysis disabled")
 endif()
 
-# Helper function: opt a target into clang-tidy analysis when available
+# helper to enable clang-tidy
 function(enable_clang_tidy target)
     if(CLANG_TIDY_EXE)
         set_target_properties(${target} PROPERTIES CXX_CLANG_TIDY
-            # Semicolon-separated: executable + arguments
+            # semicolon-separated arguments
             "${CLANG_TIDY_EXE};--config-file=${CMAKE_SOURCE_DIR}/.clang-tidy"
         )
     endif()
 endfunction()
 
-# ---------------------------------------------------------------------------
-# Subdirectories
-# ---------------------------------------------------------------------------
+# subdirectories
 add_subdirectory(libs/notui)
 add_subdirectory(src)
 
-# ---------------------------------------------------------------------------
-# Testing
-# ---------------------------------------------------------------------------
+# testing
 include(CTest)
 enable_testing()
 
-# Explicitly list test sources — avoids CMake's stale-glob footgun where
-# adding/removing a file requires a manual re-configure to be picked up.
+# list test sources explicitly
 add_executable(UnitTests
     tests/test_vehicle.cpp
     tests/test_filestorage.cpp
@@ -113,31 +94,25 @@ target_link_libraries(UnitTests PRIVATE
     Catch2::Catch2WithMain
 )
 
-# Tests intentionally excluded from clang-tidy: Catch2 macros generate
-# patterns that produce false-positive diagnostics.
+# ctest excluded from clang-tidy to avoid false-positives
 add_test(NAME UnitTests COMMAND UnitTests)
 
-# ---------------------------------------------------------------------------
-# Install rules
-# ---------------------------------------------------------------------------
-# Install the main application binary
+# install rules
+# install application binary
 install(
     TARGETS RentalSystem
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 
-# Install an empty data skeleton so the install prefix contains the
-# records/ subdirectory. Runtime data is written to the OS user-data
-# directory (XDG_DATA_HOME on Linux, %APPDATA% on Windows) and is NOT
-# stored under the install prefix.
+# install data skeleton
 install(
     DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}"
-    OPTIONAL  # The data/ dir may not exist yet in a fresh checkout
+    OPTIONAL  # data dir optional if not exists
     FILES_MATCHING PATTERN ".gitkeep"
 )
 
-# Ensure the records/ subdirectory is created at install time
+# create records dir at install
 install(
     DIRECTORY DESTINATION "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/records"
 )

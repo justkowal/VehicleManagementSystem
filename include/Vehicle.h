@@ -76,7 +76,7 @@ struct AdvancedFilter {
             }
         };
 
-        // ID
+        // id
         if (id.active()) {
             uint32_t val = vehicle.getId();
             if (id.min_val.has_value() && val < safe_stoul(*id.min_val)) {
@@ -90,7 +90,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Brand
+        // brand
         if (brand.active()) {
             std::string val = vehicle.getBrand();
             if (brand.min_val.has_value() && val < *brand.min_val) {
@@ -104,7 +104,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Model
+        // model
         if (model.active()) {
             std::string val = vehicle.getModelOrType();
             if (model.min_val.has_value() && val < *model.min_val) {
@@ -118,7 +118,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Type
+        // type
         if (type.active()) {
             std::string val = vehicle.getTypeString();
             if (type.min_val.has_value() && val < *type.min_val) {
@@ -132,7 +132,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Status
+        // status
         if (status.active()) {
             std::string val = vehicle.getStatusString();
             if (status.min_val.has_value() && val < *status.min_val) {
@@ -146,7 +146,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Price
+        // price
         if (price.active()) {
             int val = vehicle.getPricePerHour();
             if (price.min_val.has_value() && val < safe_stod_grosz(*price.min_val)) {
@@ -160,7 +160,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Seats (only for Car)
+        // seats (only for car)
         if (seats.active()) {
             const auto& variant = vehicle.getVariant();
             if (!std::holds_alternative<Car>(variant)) {
@@ -178,7 +178,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Payload capacity (only for Truck)
+        // payload capacity (only for truck)
         if (payload.active()) {
             const auto& variant = vehicle.getVariant();
             if (!std::holds_alternative<Truck>(variant)) {
@@ -196,7 +196,7 @@ struct AdvancedFilter {
             }
         }
 
-        // Rental Code
+        // rental code
         if (rental_code.active()) {
             std::string val = rental_code_val.value_or("");
             if (rental_code.min_val.has_value() && val < *rental_code.min_val) {

@@ -16,9 +16,7 @@
 
 namespace fs = std::filesystem;
 
-// ---------------------------------------------------------------------------
-// Static member definitions
-// ---------------------------------------------------------------------------
+// static member definitions
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 fs::path    AppPaths::data_dir_;
 std::string AppPaths::storage_name_;
@@ -26,10 +24,7 @@ std::string AppPaths::printer_name_;
 std::string AppPaths::printer_device_;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
+// internal helpers
 namespace {
 
 constexpr std::string_view DEFAULT_PRINTER_DEVICE = "127.0.0.1:9100";
@@ -38,7 +33,7 @@ auto osError(const std::error_code& err) -> std::string {
     return err.message();
 }
 
-// Joins a vector of strings with a separator for display.
+// join strings
 auto join(const std::vector<std::string>& vec, std::string_view sep) -> std::string {
     if (vec.empty()) {
         return "(none)";
@@ -51,7 +46,7 @@ auto join(const std::vector<std::string>& vec, std::string_view sep) -> std::str
     return result;
 }
 
-// Trims leading and trailing whitespace.
+// trim whitespace
 auto trim(std::string_view str) -> std::string {
     size_t first = str.find_first_not_of(" \t\r\n");
     if (first == std::string_view::npos) {
@@ -63,15 +58,12 @@ auto trim(std::string_view str) -> std::string {
 
 } // namespace
 
-// ---------------------------------------------------------------------------
-// Platform default data directory
-// ---------------------------------------------------------------------------
-
+// platform default data directory
 auto AppPaths::platformDefaultDataDir() -> fs::path {
-#if defined(NDEBUG) // Release build — use OS user-data location
+#if defined(NDEBUG) // release build
 
 #if defined(_WIN32)
-    // NOLINTNEXTLINE(concurrency-mt-unsafe) — called once at startup before any threads
+    // NOLINTNEXTLINE(concurrency-mt-unsafe) - called once before threads
     const char* appdata = std::getenv("APPDATA");
     if (appdata != nullptr) {
         return fs::path(appdata) / "VehicleRentalSystem";
@@ -100,15 +92,12 @@ auto AppPaths::platformDefaultDataDir() -> fs::path {
     return fs::current_path() / "data";
 #endif
 
-#else  // Debug build — keep data next to the working directory
+#else  // debug build
     return {"data"};
 #endif
 }
 
-// ---------------------------------------------------------------------------
-// Path validation
-// ---------------------------------------------------------------------------
-
+// path validation
 auto AppPaths::validateAndCreate(const fs::path& path) -> bool {
     std::error_code err;
 
@@ -134,10 +123,7 @@ auto AppPaths::validateAndCreate(const fs::path& path) -> bool {
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// Help text
-// ---------------------------------------------------------------------------
-
+// help text
 auto AppPaths::printHelp(const char* prog_name, std::ostream& out_stream) -> void {
     const auto storage_list = StorageRegistry::available();
     const auto printer_list = PrinterRegistry::available();
@@ -185,15 +171,12 @@ auto AppPaths::handleHelp(int argc, char** argv) -> bool {
     return false;
 }
 
-// ---------------------------------------------------------------------------
-// Config file loading
-// ---------------------------------------------------------------------------
-
+// config file loading
 auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
     const fs::path config_path = fs::current_path() / "vrs.conf";
     std::ifstream file(config_path);
     if (!file.is_open()) {
-        return true; // Missing file is not an error
+        return true; // missing file is not an error
     }
 
     std::string line;
@@ -202,14 +185,14 @@ auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
         line_num++;
         std::string_view line_view(line);
 
-        // Trim leading space
+        // trim leading space
         size_t first = line_view.find_first_not_of(" \t\r\n");
         if (first == std::string_view::npos) {
-            continue; // Empty line
+            continue; // empty line
         }
         line_view = line_view.substr(first);
         if (line_view.starts_with('#')) {
-            continue; // Comment line
+            continue; // comment line
         }
 
         size_t eq_pos = line_view.find('=');
@@ -243,17 +226,14 @@ auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// CLI parsing and resolution
-// ---------------------------------------------------------------------------
-
+// cli parsing and resolution
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 auto AppPaths::parseSingleArg(std::string_view arg,
                               int& idx,
                               int argc,
                               char** argv,
                               ConfigArgs& out_args) -> bool {
-    // ---- Data directory flags --------------------------------------------
+    // data dir flags
     if (arg == "--local") {
         out_args.data_override = fs::path("data");
         return true;
@@ -274,7 +254,7 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
-    // ---- Storage backend flag ---------------------------------------------
+    // storage backend flag
     if (arg == "--storage") {
         if (idx + 1 >= argc) {
             std::cerr << "[Error] --storage requires a backend name.\n"
@@ -291,7 +271,7 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
-    // ---- Printer backend flags --------------------------------------------
+    // printer backend flags
     if (arg == "--printer") {
         if (idx + 1 >= argc) {
             std::cerr << "[Error] --printer requires a backend name.\n"
@@ -323,12 +303,12 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
-    // ---- Help flags (ignored here, resolved in handleHelp) ---------------
+    // help flags (handled in handleHelp)
     if (arg == "--help" || arg == "-h") {
         return true;
     }
 
-    // ---- Unknown flag -----------------------------------------------------
+    // unknown flag
     if (arg.starts_with("-")) {
         std::cerr << "[Error] Unknown flag: \"" << arg << "\"\n\n";
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -354,17 +334,17 @@ auto AppPaths::parseCommandLine(int argc,
 auto AppPaths::resolve(int argc, char** argv) -> bool {
     ConfigArgs args{};
 
-    // ---- 1. Load config file values first (CWD relative) -----------------
+    // load config file
     if (!loadConfigFile(args)) {
         return false;
     }
 
-    // ---- 2. Parse CLI flags (override config values) ---------------------
+    // parse cli flags
     if (!parseCommandLine(argc, argv, args)) {
         return false;
     }
 
-    // ---- 3. Validate storage selection -----------------------------------
+    // validate storage
     const std::string resolved_storage =
         args.storage_arg.empty() ? StorageRegistry::defaultName() : args.storage_arg;
 
@@ -376,7 +356,7 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         return false;
     }
 
-    // ---- 4. Validate printer selection -----------------------------------
+    // validate printer
     const std::string resolved_printer =
         args.printer_arg.empty() ? PrinterRegistry::defaultName() : args.printer_arg;
 
@@ -388,11 +368,11 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         return false;
     }
 
-    // ---- 5. Resolve candidate values -------------------------------------
+    // resolve values
     const fs::path candidate = args.data_override.value_or(platformDefaultDataDir());
     const std::string resolved_device = args.device_arg.empty() ? std::string(DEFAULT_PRINTER_DEVICE) : args.device_arg;
 
-    // ---- 6. Run custom validation lambdas --------------------------------
+    // run validations
     if (auto err_msg = StorageRegistry::validate(resolved_storage, candidate.string())) {
         std::cerr << "[Error] " << *err_msg << "\n";
         return false;
@@ -403,12 +383,12 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         return false;
     }
 
-    // ---- 7. Validate directory writability & creation --------------------
+    // validate directory
     if (!validateAndCreate(candidate)) {
         return false;
     }
 
-    // ---- 8. Commit all resolved config -----------------------------------
+    // commit config
     data_dir_       = candidate;
     storage_name_   = resolved_storage;
     printer_name_   = resolved_printer;
@@ -417,10 +397,7 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// Getters
-// ---------------------------------------------------------------------------
-
+// getters
 auto AppPaths::dataDir()       -> const fs::path&   { return data_dir_; }
 auto AppPaths::storageName()   -> const std::string& { return storage_name_; }
 auto AppPaths::printerName()   -> const std::string& { return printer_name_; }

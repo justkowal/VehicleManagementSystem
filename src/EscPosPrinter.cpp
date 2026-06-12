@@ -9,7 +9,7 @@
 #include <array>
 #include <cmath>
 
-// Includes for POSIX Network Sockets (Linux/macOS)
+// socket includes
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -29,7 +29,7 @@ const std::string ESC_DOUBLE_HW = std::string() + char(0x1D) + char(0x21) + char
 const std::string ESC_NORMAL_TEXT = std::string() + char(0x1D) + char(0x21) + char(0x00);
 const std::string ESC_DISABLE_HRI = std::string() + char(0x1D) + char(0x48) + char(0x00);
 
-// Standard 80mm thermal receipt width in characters
+// 80mm thermal receipt width
 const int CPL = 48;
 const std::string SEPARATOR = std::string(CPL, '-') + "\n";
 
@@ -45,7 +45,7 @@ const std::string RECEIPT_FOOTER = "\n" + ESC_CENTER +
                                    "Zapraszamy ponownie.\n" +
                                    ESC_FEED_5 + ESC_FULL_CUT;
 
-// Helper: Pads spaces between a left string and a right string
+// pads spaces between left and right
 auto justifyLine(const std::string& left, const std::string& right) -> std::string {
     int spaces = CPL - static_cast<int>(left.length() + right.length());
     if (spaces < 1) {
@@ -54,7 +54,7 @@ auto justifyLine(const std::string& left, const std::string& right) -> std::stri
     return left + std::string(static_cast<size_t>(spaces), ' ') + right + "\n";
 }
 
-// Helper: Safely converts integer grosz to a 2-decimal string
+// converts grosz to decimal string
 auto formatMoney(int amount_grosz, const std::string& suffix = "") -> std::string {
     int zlotys = amount_grosz / 100;
     int groszy = std::abs(amount_grosz % 100);
@@ -66,8 +66,7 @@ auto formatMoney(int amount_grosz, const std::string& suffix = "") -> std::strin
     return oss.str();
 }
 
-// Helper: Performs a TCP connect and sends the payload with a 2-second timeout.
-// Returns true on success, false on failure or timeout.
+// tcp connect and send with 2s timeout
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& payload) -> bool {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -75,7 +74,7 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
         return false;
     }
 
-    // Set socket to non-blocking mode
+    // set non-blocking
     int flags = fcntl(sock, F_GETFL, 0); // NOLINT(cppcoreguidelines-pro-type-vararg)
     if (flags >= 0) {
         fcntl(sock, F_SETFL, flags | O_NONBLOCK); // NOLINT(cppcoreguidelines-pro-type-vararg)
@@ -83,7 +82,7 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
 
     struct sockaddr_in serv_addr {};
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
+    serv_addr.sin_port = htons(static_cast<uint16_t>(port));
 
     if (inet_pton(AF_INET, ip_addr.c_str(), &serv_addr.sin_addr) <= 0) {
         close(sock);
@@ -98,7 +97,7 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
             FD_SET(sock, &fdsw); // NOLINT(hicpp-no-assembler,cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 
             struct timeval timeout_val {};
-            timeout_val.tv_sec = 2; // 2 seconds timeout
+            timeout_val.tv_sec = 2; // 2s timeout
             timeout_val.tv_usec = 0;
 
             res = select(sock + 1, nullptr, &fdsw, nullptr, &timeout_val);
@@ -106,20 +105,20 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
                 int err = 0;
                 socklen_t len = sizeof(err);
                 if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len) == 0 && err == 0) {
-                    res = 0; // connect succeeded
+                    res = 0; // success
                 } else {
-                    res = -1; // connect failed
+                    res = -1; // failed
                 }
             } else {
-                res = -1; // timeout or error
+                res = -1; // timeout/error
             }
         } else {
-            res = -1; // other connection error
+            res = -1; // error
         }
     }
 
     if (res == 0) {
-        // Restore socket to blocking mode
+        // set blocking
         if (flags >= 0) {
             fcntl(sock, F_SETFL, flags); // NOLINT(cppcoreguidelines-pro-type-vararg)
         }
@@ -137,7 +136,7 @@ EscPosPrinter::EscPosPrinter(std::string device_path) : device_path_(std::move(d
 
 auto EscPosPrinter::sendCommand(const std::string& payload) const -> void {
 
-    // Check if the device_path_ is an IP:PORT network address (e.g., 127.0.0.1:9100)
+    // check if network address
     size_t colon_pos = device_path_.find(':');
     if (colon_pos != std::string::npos && colon_pos > 0 && isdigit(static_cast<unsigned char>(device_path_[colon_pos + 1])) != 0) {
         std::string ip_addr = device_path_.substr(0, colon_pos);
@@ -149,7 +148,7 @@ auto EscPosPrinter::sendCommand(const std::string& payload) const -> void {
         throw PrinterException("Could not connect to network printer at: " + device_path_);
     }
 
-    // Fallback: Treat device_path_ as a regular file path (or /dev/usb/lp0)
+    // fallback to file path
     std::ofstream port(device_path_, std::ios::out | std::ios::binary | std::ios::app);
     if (!port.is_open()) {
         throw PrinterException("Printer offline: " + device_path_);
@@ -219,7 +218,6 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, int price_per_h
     payload += "PARAGON FISKALNY\n\n";
     payload += ESC_BOLD_OFF;
 
-    // Items and Quantities
     payload += ESC_LEFT;
     payload += "Wynajem: " + vehicle_name + "\n";
 
@@ -227,17 +225,14 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, int price_per_h
     amount_stream << std::fixed << std::setprecision(2) << rental_duration_hours << " h x "
                   << formatMoney(price_per_hour) << " PLN";
 
-    // Automatically aligns text to flush left and flush right
     payload += justifyLine(amount_stream.str(), formatMoney(total_price, "A"));
     payload += SEPARATOR;
 
-    // Taxes
     payload += justifyLine("SP. OPODATKOWANA A:", formatMoney(net_price));
     payload += justifyLine("PODATEK PTU 23% A:", formatMoney(vat_amount));
     payload += justifyLine("SUMA PTU:", formatMoney(vat_amount));
     payload += SEPARATOR;
 
-    // Final Total
     payload += ESC_CENTER;
     payload += ESC_BOLD_ON;
     payload += ESC_DOUBLE_HW;
@@ -252,7 +247,7 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, int price_per_h
     sendCommand(payload);
 }
 
-// Self-registration — makes "escpos" available via --printer flag.
+// register escpos
 #include "PrinterRegistry.h"
 REGISTER_PRINTER_WITH_VALIDATOR("escpos", EscPosPrinter, [](const std::string& address) -> std::optional<std::string> {
     if (address.empty()) {

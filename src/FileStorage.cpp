@@ -285,9 +285,7 @@ auto FileStorage::loadActiveRentals() -> std::unordered_map<std::string, RentalS
     return rentals;
 }
 
-// Self-registration — makes "file" available via --storage flag.
-// Must appear after the class definition; the macro expands to a static bool
-// that is initialised before main() runs.
+// register file storage
 #include "StorageRegistry.h"
 REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path) -> std::optional<std::string> {
     static const std::regex path_regex(R"(^[^\0]+$)");
@@ -302,7 +300,7 @@ REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path)
         return "Invalid storage path structure.";
     }
 
-    // Find the closest existing ancestor directory
+    // find closest ancestor
     fs::path ancestor = candidate;
     while (!ancestor.empty() && !fs::exists(ancestor, err)) {
         ancestor = ancestor.parent_path();
@@ -312,7 +310,7 @@ REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path)
         return "Parent path is not reachable or is not a directory.";
     }
 
-    // Verify write permission in the existing ancestor
+    // check write permissions
     const fs::path probe = ancestor / ".vms_write_test_probe";
     {
         std::ofstream test_file(probe);

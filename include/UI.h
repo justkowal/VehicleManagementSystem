@@ -253,28 +253,28 @@ private:
     BackgroundWorker worker_;
     TaskResultQueue result_queue_;
 
-    // Layout panels
+    // layout panels
     std::shared_ptr<notui::ScrollArea> left_list_panel_;
     std::shared_ptr<notui::VBox> right_detail_panel_;
     std::shared_ptr<notui::SplitBox> split_area_;
 
-    // Top Bar inputs
+    // top bar inputs
     std::shared_ptr<notui::InputBox<std::string>> search_input_;
     std::shared_ptr<notui::Dropdown> type_filter_;
     std::shared_ptr<notui::Dropdown> status_filter_;
     std::shared_ptr<notui::Dropdown> secondary_info_filter_;
     std::shared_ptr<notui::Button> advanced_filter_btn_;
 
-    // Sidebar/Details controls
+    // sidebar/details controls
     std::shared_ptr<LoadingOverlay> loading_overlay_;
     
-    // Stats labels
+    // stats labels
     std::shared_ptr<notui::Label> total_stat_;
     std::shared_ptr<notui::Label> avail_stat_;
     std::shared_ptr<notui::Label> rent_stat_;
     std::shared_ptr<notui::Label> maint_stat_;
 
-    // UI state
+    // ui state
     std::vector<Vehicle> current_fleet_;
     std::optional<uint32_t> selected_vehicle_id_;
     std::vector<Record> selected_vehicle_logs_;
@@ -289,7 +289,7 @@ private:
     auto update_stats() -> void;
     [[nodiscard]] auto handle_global_shortcuts(const ncinput& nc_input) -> bool;
     
-    // Async Triggers
+    // async triggers
     auto trigger_load_fleet() -> void;
     auto trigger_rent(uint32_t vehicle_id, const std::string& name, const std::string& surname, const std::string& id_card) -> void;
     auto trigger_return(uint32_t vehicle_id, const std::string& notes) -> void;
@@ -299,7 +299,7 @@ private:
     auto trigger_load_logs(uint32_t vehicle_id) -> void;
     auto trigger_decommission(uint32_t vehicle_id) -> void;
 
-    // Async Result Handlers
+    // async result handlers
     auto process_result_queue() -> void;
     auto show_alert(const std::string& title, const std::string& message) -> void;
     auto show_confirm_quit() -> void;

@@ -13,13 +13,12 @@
 auto main(int argc, char** argv) -> int {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    // Handle --help first (reads from registries, no side effects)
+    // handle help first
     if (AppPaths::handleHelp(argc, argv)) {
         return EXIT_SUCCESS;
     }
 
-    // Resolve and validate all config (data path, storage backend, printer).
-    // On failure, AppPaths prints a diagnostic and returns false.
+    // resolve and validate config
     if (!AppPaths::resolve(argc, argv)) {
         return EXIT_FAILURE;
     }
@@ -29,7 +28,7 @@ auto main(int argc, char** argv) -> int {
     const std::string printer_name = AppPaths::printerName();
     const std::string printer_dev  = AppPaths::printerDevice();
 
-    // Pre-populate the fleet database with showcase vehicles on first launch.
+    // populate default fleet on first launch
     {
         auto init_storage = StorageRegistry::create(storage_name, data_path);
         FleetManager init_mgr(std::move(init_storage));

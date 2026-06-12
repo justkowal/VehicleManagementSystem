@@ -28,16 +28,16 @@ auto process_log_entry(RecordType type, const std::string& raw_details) -> LogRe
     ColorRGB color{120, 120, 120}; // default gray
     switch (type) {
     case RecordType::Checkout:
-        color = {220, 160, 20}; // Orange
+        color = {220, 160, 20}; // orange
         break;
     case RecordType::Returned:
-        color = {40, 180, 80}; // Green
+        color = {40, 180, 80}; // green
         break;
     case RecordType::Maintenance:
-        color = {220, 50, 50}; // Red
+        color = {220, 50, 50}; // red
         break;
     case RecordType::Note:
-        color = {80, 150, 255}; // Blue
+        color = {80, 150, 255}; // blue
         break;
     }
 
@@ -54,25 +54,23 @@ auto process_log_entry(RecordType type, const std::string& raw_details) -> LogRe
             [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
 
         if (lower_label == "checkout" || lower_label == "rent" || lower_label == "rented") {
-            color = {220, 160, 20}; // Orange
+            color = {220, 160, 20}; // orange
         } else if (lower_label == "returned" || lower_label == "return" || lower_label == "retn" ||
                    lower_label == "available" || lower_label == "avail") {
-            color = {40, 180, 80}; // Green
+            color = {40, 180, 80}; // green
         } else if (lower_label == "maintenance" || lower_label == "service" ||
                    lower_label == "mntc" || lower_label == "maint") {
-            color = {220, 50, 50}; // Red
+            color = {220, 50, 50}; // red
         } else if (lower_label == "note") {
-            color = {80, 150, 255}; // Blue
+            color = {80, 150, 255}; // blue
         } else {
-            color = {120, 120, 120}; // Unknown label -> gray dot
+            color = {120, 120, 120}; // unknown label -> gray
         }
     }
 
     return {color, details};
 }
 } // namespace
-
-// --- LoadingOverlay Implementation ---
 
 LoadingOverlay::LoadingOverlay(std::string message) {
     fixed_height = 5;
@@ -149,8 +147,6 @@ auto LoadingOverlay::raise_to_top() -> void {
     }
     VBox::raise_to_top();
 }
-
-// --- LogsModal Implementation ---
 
 LogsModal::LogsModal(std::string title, const std::vector<Record>& records,
                      std::function<void()> on_close)
@@ -711,8 +707,6 @@ AdvancedFilterModal::AdvancedFilterModal(
     add_child(btn_row);
 }
 
-// --- UI Implementation ---
-
 UI::UI(FleetManager& manager) : manager_(manager) {
     root_ = std::make_shared<VBox>();
     root_->style.bg({15, 15, 20}).pad({1, 1, 1, 1});
@@ -784,7 +778,6 @@ auto UI::run() -> void {
 }
 
 auto UI::build_ui() -> void {
-    // 1. Header Banner
     auto header =
         std::make_shared<Label>("VEHICLE RENTAL & FLEET MANAGEMENT SYSTEM", Size{3, 0}, true);
     header->style.bg({35, 75, 180}).fg({255, 255, 255}).frame(true, true).attr(NCSTYLE_BOLD);
@@ -796,7 +789,6 @@ auto UI::build_ui() -> void {
     sp_h->flex = 0;
     root_->add_child(sp_h);
 
-    // 2. Statistics Row
     auto stats_row = std::make_shared<HBox>();
     stats_row->fixed_height = 3;
     stats_row->style.bg({30, 30, 35}).frame(true, true, " Fleet Overview ").pad({0, 1, 0, 1});
@@ -825,7 +817,6 @@ auto UI::build_ui() -> void {
     sp_s->flex = 0;
     root_->add_child(sp_s);
 
-    // 3. Top Search & Filter Bar
     auto top_bar = std::make_shared<HBox>();
     top_bar->fixed_height = 3;
     top_bar->style.bg({25, 25, 30}).frame(true, true, " Filters ").pad({0, 1, 0, 1});
@@ -891,18 +882,15 @@ auto UI::build_ui() -> void {
     sp_m->flex = 0;
     root_->add_child(sp_m);
 
-    // 4. Split Layout Area
     split_area_ = std::make_shared<SplitBox>(SplitBox::Orientation::Horizontal, 0.5);
     split_area_->flex = 1;
     split_area_->set_split_enabled(false);
 
-    // Left List
     left_list_panel_ = std::make_shared<ScrollArea>();
     left_list_panel_->flex = 1;
     left_list_panel_->style.bg({20, 20, 25}).frame(true, true, " Vehicle List ").pad({1, 1, 1, 1});
     split_area_->add_child(left_list_panel_);
 
-    // Right Details Panel (initially collapsed)
     right_detail_panel_ = std::make_shared<VBox>();
     right_detail_panel_->flex = 0;
     right_detail_panel_->fixed_width = 0;
@@ -918,7 +906,6 @@ auto UI::build_ui() -> void {
     sp_b->flex = 0;
     root_->add_child(sp_b);
 
-    // 5. Bottom Status/Action Footer Bar (contains FAB and system controls)
     auto footer_bar = std::make_shared<HBox>();
     footer_bar->fixed_height = 1;
     footer_bar->flex = 0;
@@ -943,7 +930,6 @@ auto UI::build_ui() -> void {
     footer_spacer->flex = 1;
     footer_bar->add_child(footer_spacer);
 
-    // Dynamic styled FAB on the right
     auto quick_return_btn =
         std::make_shared<Button>("Return with Code", [this]() { this->show_quick_return_modal(); });
     quick_return_btn->style.bg({220, 160, 20}).fg({0, 0, 0}).attr(NCSTYLE_BOLD);
@@ -963,13 +949,11 @@ auto UI::build_ui() -> void {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto UI::refresh_fleet_list() -> void {
-    // 1. Clean Left ScrollArea
     auto children_list = left_list_panel_->get_children();
     for (const auto& child : children_list) {
         left_list_panel_->remove_child(child);
     }
 
-    // 2. Fetch filters
     std::string search_query = search_input_->get_value();
     std::transform(
         search_query.begin(), search_query.end(), search_query.begin(),
@@ -981,10 +965,8 @@ auto UI::refresh_fleet_list() -> void {
 
     bool has_visible_cards = false;
 
-    // 3. Rebuild cards using the templated searchFleet
     auto matched_vehicles = manager_.searchFleet(
         [&](const Vehicle& veh) {
-            // filter type
             std::string type = veh.getTypeString();
             if (type_idx == 1 && type != "Car") {
                 return false;
@@ -996,7 +978,6 @@ auto UI::refresh_fleet_list() -> void {
                 return false;
             }
 
-            // filter status
             VehicleStatus status = veh.getStatus();
             if (status_idx == 1 && status != VehicleStatus::Available) {
                 return false;
@@ -1012,7 +993,6 @@ auto UI::refresh_fleet_list() -> void {
                 return true;
             }
 
-            // Check if query is found in any field case-insensitively
             auto matches = [&](const std::string& field_val) {
                 std::string val_lower = field_val;
                 std::transform(val_lower.begin(), val_lower.end(), val_lower.begin(),
@@ -1071,7 +1051,6 @@ auto UI::refresh_fleet_list() -> void {
 
         VehicleStatus stat = veh.getStatus();
 
-        // Create a VehicleCard
         auto card = std::make_shared<VehicleCard>(veh.getId());
         card->fixed_height = 4;
 
@@ -1083,7 +1062,6 @@ auto UI::refresh_fleet_list() -> void {
             card->style.bg({30, 30, 38}).fg({220, 220, 220}).frame(true, true);
         }
 
-        // Card header row
         auto head_row = std::make_shared<HBox>();
         head_row->fixed_height = 1;
         head_row->flex = 0;
@@ -1104,7 +1082,7 @@ auto UI::refresh_fleet_list() -> void {
 
         card->add_child(head_row);
 
-        // Retrieve specs_text to check if it matches search_query
+        // match specs
         std::string specs_text;
         std::visit(
             [&](const auto& item) {
@@ -1131,7 +1109,7 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        // Active Rental Code text
+        // active rental code
         std::string rental_code_str = "Code: None";
         auto rental_code_opt = manager_.getRentalCodeByVehicleId(veh.getId());
         if (rental_code_opt.has_value()) {
@@ -1149,7 +1127,7 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        // Status text
+        // status text
         std::string stat_str = "Status: [" + veh.getStatusString();
         if (veh.getStatus() == VehicleStatus::Rented) {
             auto hours_opt = manager_.getRentalBilledHours(veh.getId());
@@ -1169,7 +1147,7 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        // Card body row
+        // card body
         auto body_row = std::make_shared<HBox>();
         body_row->fixed_height = 1;
         body_row->flex = 0;
@@ -1182,7 +1160,7 @@ auto UI::refresh_fleet_list() -> void {
         rate_lbl->style.fg({180, 180, 180});
         body_row->add_child(rate_lbl);
 
-        // Determine which secondary label to display
+        // secondary label selection
         int final_display = display_idx;
         if (!search_query.empty()) {
             bool current_matched = false;
@@ -1192,8 +1170,7 @@ auto UI::refresh_fleet_list() -> void {
             }
 
             if (!current_matched) {
-                // Override dropdown selection to show whatever matched (spec -> rental code ->
-                // status)
+                // override matched label
                 if (spec_matched) {
                     final_display = 1;
                 } else if (rental_code_matched) {
@@ -1204,23 +1181,23 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        if (final_display == 1) { // Show: Specs
+        if (final_display == 1) { // specs
             auto spec_lbl = std::make_shared<Label>(specs_text, Size{1, 24});
             spec_lbl->set_highlight_query(search_query);
             spec_lbl->style.fg({180, 180, 180});
             body_row->add_child(spec_lbl);
-        } else if (final_display == 2) { // Show: Rental Code
+        } else if (final_display == 2) { // rental code
             auto rent_lbl = std::make_shared<Label>(rental_code_str, Size{1, 24});
             rent_lbl->set_highlight_query(search_query);
             rent_lbl->style.fg({180, 180, 180});
             body_row->add_child(rent_lbl);
-        } else if (final_display == 3) { // Show: ID
+        } else if (final_display == 3) { // id
             auto id_lbl =
                 std::make_shared<Label>("ID: " + std::to_string(veh.getId()), Size{1, 20});
             id_lbl->set_highlight_query(search_query);
             id_lbl->style.fg({180, 180, 180});
             body_row->add_child(id_lbl);
-        } else { // Show: Status (Default / final_display == 0)
+        } else { // status
             auto stat_lbl = std::make_shared<Label>(stat_str, Size{1, 25});
             stat_lbl->set_highlight_query(search_query);
             if (stat == VehicleStatus::Available) {
@@ -1249,7 +1226,7 @@ auto UI::refresh_fleet_list() -> void {
         left_list_panel_->add_child(empty_lbl);
     }
 
-    // 4. Update Right Details Panel
+    // update details
     rebuild_details_panel();
 
     compositor_->trigger_layout();
@@ -1263,10 +1240,10 @@ auto UI::select_vehicle(uint32_t vehicle_id) -> void {
     is_loading_logs_ = true;
     trigger_load_logs(vehicle_id);
 
-    // 1. Adjust layouts for split view
+    // adjust split view
     split_area_->set_split_enabled(true);
 
-    // 2. Update background highlights of all cards
+    // update card highlights
     for (const auto& child : left_list_panel_->get_children()) {
         auto card = std::dynamic_pointer_cast<VehicleCard>(child);
         if (card != nullptr) {
@@ -1278,10 +1255,10 @@ auto UI::select_vehicle(uint32_t vehicle_id) -> void {
         }
     }
 
-    // 3. Rebuild the details panel
+    // rebuild details
     rebuild_details_panel();
 
-    // 4. Trigger layout update
+    // trigger layout
     compositor_->trigger_layout();
 }
 
@@ -1315,7 +1292,7 @@ auto UI::rebuild_details_panel() -> void {
         d_id->style.fg({150, 150, 150});
         right_detail_panel_->add_child(d_id);
 
-        // Display custom variant specifics
+        // variant details
         std::string specs_text;
         std::visit(
             [&](const auto& item) {
@@ -1341,7 +1318,7 @@ auto UI::rebuild_details_panel() -> void {
         d_rate->style.fg({180, 180, 180});
         right_detail_panel_->add_child(d_rate);
 
-        // Colored Status Label
+        // status label
         auto status_row = std::make_shared<HBox>();
         status_row->fixed_height = 1;
         status_row->flex = 0;
@@ -1362,12 +1339,12 @@ auto UI::rebuild_details_panel() -> void {
         sp_dt->flex = 0;
         right_detail_panel_->add_child(sp_dt);
 
-        // History Header
+        // history header
         auto logs_header = std::make_shared<Label>("--- Transaction History Logs ---", Size{1, 35});
         logs_header->style.fg({100, 160, 255}).attr(NCSTYLE_BOLD);
         right_detail_panel_->add_child(logs_header);
 
-        // Log entries area
+        // log entries
         auto log_scroll = std::make_shared<ScrollArea>();
         log_scroll->flex = 1;
         log_scroll->style.bg({20, 20, 22}).pad({0, 1, 0, 1});
@@ -1450,7 +1427,7 @@ auto UI::rebuild_details_panel() -> void {
         sp_act->flex = 0;
         right_detail_panel_->add_child(sp_act);
 
-        // Context Action Row
+        // context action row
         auto action_row = std::make_shared<HBox>();
         action_row->fixed_height = 1;
         action_row->flex = 0;
@@ -1603,7 +1580,7 @@ auto UI::update_stats() -> void {
     maint_stat_->set_text("Maintenance: " + std::to_string(maint));
 }
 
-// --- Async triggers ---
+// async triggers
 
 auto UI::trigger_load_fleet() -> void {
     loading_overlay_ = std::make_shared<LoadingOverlay>("Loading Fleet DB...");
@@ -1782,7 +1759,7 @@ auto UI::trigger_load_logs(uint32_t vehicle_id) -> void {
         res.type = AsyncTaskType::LoadLogs;
         res.target_id = vehicle_id;
         try {
-            // Retrieve up to 25 records
+            // up to 25 records
             res.logs =
                 this->manager_.getVehicle(vehicle_id).has_value()
                     ? std::unique_ptr<IStorage>(new FileStorage(AppPaths::dataDir().string()))
@@ -1820,7 +1797,7 @@ auto UI::trigger_decommission(uint32_t vehicle_id) -> void {
     });
 }
 
-// --- Processing Results ---
+// process results
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto UI::process_result_queue() -> void {

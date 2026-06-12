@@ -1,6 +1,4 @@
-# ---------------------------------------------------------------------------
-# rental_engine — core business logic library
-# ---------------------------------------------------------------------------
+# rental_engine core library
 add_library(rental_engine OBJECT
     Vehicle.cpp
     FleetMgmt.cpp
@@ -9,12 +7,12 @@ add_library(rental_engine OBJECT
     AppPaths.cpp
 )
 
-# PUBLIC: consumers of rental_engine automatically inherit this include path
+# consumers of rental_engine inherit this include path
 target_include_directories(rental_engine PUBLIC
     "${CMAKE_SOURCE_DIR}/include"
 )
 
-# Compiler warnings — escalated in Release to catch production issues early
+# compiler warnings
 target_compile_options(rental_engine PRIVATE
     $<$<CONFIG:Debug>:
         -Wall
@@ -36,9 +34,7 @@ target_compile_options(rental_engine PRIVATE
 
 enable_clang_tidy(rental_engine)
 
-# ---------------------------------------------------------------------------
-# RentalSystem — main application executable
-# ---------------------------------------------------------------------------
+# RentalSystem main application
 add_executable(RentalSystem
     main.cpp
     UI.cpp
@@ -75,9 +71,7 @@ target_compile_options(RentalSystem PRIVATE
 
 enable_clang_tidy(RentalSystem)
 
-# ---------------------------------------------------------------------------
-# demo_notui — developer demo for the notui widget library
-# ---------------------------------------------------------------------------
+# demo_notui developer demo
 add_executable(demo_notui
     demo_notui.cpp
 )

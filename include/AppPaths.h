@@ -18,19 +18,16 @@ public:
 
     AppPaths() = delete;
 
-    // Parses argc/argv, resolves all config, creates the data directory, and
-    // validates it is writable. Returns false and prints a diagnostic to
-    // stderr on any error — callers should exit(EXIT_FAILURE) on false.
+    // parse and resolve config
     [[nodiscard]] static auto resolve(int argc, char** argv) -> bool;
 
-    // Prints usage (including dynamically-listed backends) and returns true
-    // when --help / -h was passed. Callers should exit(EXIT_SUCCESS) on true.
+    // print help if -h/--help passed
     [[nodiscard]] static auto handleHelp(int argc, char** argv) -> bool;
 
-    // Prints the general help message. Defaults to std::cout.
+    // print general help message
     static auto printHelp(const char* prog_name, std::ostream& out_stream = std::cout) -> void;
 
-    // ---- Getters (undefined behaviour if called before resolve()) ----------
+    // getters
 
     [[nodiscard]] static auto dataDir()       -> const std::filesystem::path&;
     [[nodiscard]] static auto storageName()   -> const std::string&;
@@ -41,22 +38,22 @@ private:
     static auto platformDefaultDataDir() -> std::filesystem::path;
     static auto validateAndCreate(const std::filesystem::path& path) -> bool;
 
-    // Helper to load configuration file from PWD.
+    // load config from file
     [[nodiscard]] static auto loadConfigFile(ConfigArgs& out_args) -> bool;
 
-    // Helper to parse CLI arguments.
+    // parse cli arguments
     [[nodiscard]] static auto parseCommandLine(int argc,
                                                char** argv,
                                                ConfigArgs& out_args) -> bool;
 
-    // Helper to parse a single CLI argument.
+    // parse single cli argument
     [[nodiscard]] static auto parseSingleArg(std::string_view arg,
                                              int& idx,
                                              int argc,
                                              char** argv,
                                              ConfigArgs& out_args) -> bool;
 
-    // Storage for resolved config — populated by resolve().
+    // resolved config storage
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static std::filesystem::path data_dir_;
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)

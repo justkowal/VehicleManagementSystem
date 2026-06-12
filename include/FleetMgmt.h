@@ -11,7 +11,7 @@
 #include <functional>
 #include <mutex>
 
-// RentalSession definition moved to Types.h
+// rentalsession definition in Types.h
 
 class FleetManager {
 public:
