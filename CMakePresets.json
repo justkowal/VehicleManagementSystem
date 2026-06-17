@@ -1,0 +1,126 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Default Configure",
+      "description": "Default configure preset using Release configuration",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INSTALL_PREFIX": "/usr/local"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug Configure",
+      "description": "Configure preset for debug builds",
+      "binaryDir": "${sourceDir}/build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "displayName": "Build All Standard",
+      "description": "Builds the standard targets (excluding dynamic plugins)",
+      "configurePreset": "default"
+    },
+    {
+      "name": "plugin",
+      "displayName": "Build Printer Plugin",
+      "description": "Builds only the custom printer dynamic plugin",
+      "configurePreset": "default",
+      "targets": [
+        "custom_printer_plugin"
+      ]
+    },
+    {
+      "name": "debug",
+      "displayName": "Build Debug",
+      "description": "Builds debug targets",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "install-app-target",
+      "displayName": "Install Application Target",
+      "description": "Installs only the application component",
+      "configurePreset": "default",
+      "targets": [
+        "install-app"
+      ]
+    },
+    {
+      "name": "install-plugin-target",
+      "displayName": "Install Plugin Target",
+      "description": "Installs only the plugin component",
+      "configurePreset": "default",
+      "targets": [
+        "install-plugin"
+      ]
+    },
+    {
+      "name": "uninstall",
+      "displayName": "Uninstall Package",
+      "description": "Uninstalls the application and plugins",
+      "configurePreset": "default",
+      "targets": [
+        "uninstall"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "unit-tests",
+      "displayName": "Unit Tests Run",
+      "configurePreset": "default",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "install-app",
+      "displayName": "Build & Install Application",
+      "description": "Configures, builds, and installs only the application",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "install-app-target"
+        }
+      ]
+    },
+    {
+      "name": "install-plugin",
+      "displayName": "Build & Install Plugin",
+      "description": "Configures, builds, and installs only the custom printer plugin",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "plugin"
+        },
+        {
+          "type": "build",
+          "name": "install-plugin-target"
+        }
+      ]
+    }
+  ]
+}

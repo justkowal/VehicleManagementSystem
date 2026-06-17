@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <system_error>
+#include <regex>
 
 #ifdef _WIN32
 #include <shlobj.h>
@@ -85,9 +86,9 @@ auto AppPaths::platformDefaultDataDir() -> fs::path {
     }
 
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    const passwd* pw = getpwuid(getuid());
-    if (pw != nullptr) {
-        return fs::path(pw->pw_dir) / ".local" / "share" / "VehicleRentalSystem";
+    const passwd* passwd_ptr = getpwuid(getuid());
+    if (passwd_ptr != nullptr) {
+        return fs::path(passwd_ptr->pw_dir) / ".local" / "share" / "VehicleRentalSystem";
     }
 
     return fs::current_path() / "data";
@@ -180,31 +181,25 @@ auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
         return true; // missing file is not an error
     }
 
+    static const std::regex comment_regex(R"(^\s*(?:#.*)?$)");
+    static const std::regex kv_regex(R"(^\s*([A-Za-z0-9_-]+)\s*=\s*(.*))");
     std::string line;
     size_t line_num = 0;
     while (std::getline(file, line)) {
         line_num++;
-        std::string_view line_view(line);
-
-        // trim leading space
-        size_t first = line_view.find_first_not_of(" \t\r\n");
-        if (first == std::string_view::npos) {
-            continue; // empty line
-        }
-        line_view = line_view.substr(first);
-        if (line_view.starts_with('#')) {
-            continue; // comment line
+        if (std::regex_match(line, comment_regex)) {
+            continue;
         }
 
-        size_t eq_pos = line_view.find('=');
-        if (eq_pos == std::string_view::npos) {
-            LOG_ERROR("Malformed line in vrs.conf:" + std::to_string(line_num) + ": \"" + std::string(line) + "\"\n"
+        std::smatch match;
+        if (!std::regex_match(line, match, kv_regex)) {
+            LOG_ERROR("Malformed line in vrs.conf:" + std::to_string(line_num) + ": \"" + line + "\"\n"
                       "        Expected 'key=value'.");
             return false;
         }
 
-        std::string key = trim(line_view.substr(0, eq_pos));
-        std::string val = trim(line_view.substr(eq_pos + 1));
+        std::string key = match[1].str();
+        std::string val = trim(match[2].str());
 
         if (key == "storage") {
             out_args.storage_arg = val;

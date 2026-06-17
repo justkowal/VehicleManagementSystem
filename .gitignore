@@ -1,11 +1,30 @@
+# Build directories
 build*/
+*install/
+
+# Dependencies / cache / tooling
 .cache/
+.clangd/
 .vscode/
 compile_commands.json
-vehicles.txt
+
+# Local configurations (do not commit CMakeUserPresets.json)
+CMakeUserPresets.json
+
+# Object files and libraries
 *.o
 *.a
 *.so
-test_notcurses.cpp
+*.dll
+*.dylib
+*.exe
+*.pdb
+
+# Runtime generated outputs
 *data/
-*install/
+vehicles.txt
+receipt.txt
+vms.log
+
+# Other temporary/local test files
+test_notcurses.cpp

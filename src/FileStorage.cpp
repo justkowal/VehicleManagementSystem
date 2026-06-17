@@ -211,24 +211,16 @@ auto FileStorage::serializeRecord(const Record& record) -> std::string {
 }
 auto FileStorage::deserializeRecord(const std::string& line) -> std::optional<Record> {
     try {
-        // parse first 3 fields, rest is details
-        size_t pos1 = line.find(',');
-        if (pos1 == std::string::npos) {
-            return std::nullopt;
-        }
-        size_t pos2 = line.find(',', pos1 + 1);
-        if (pos2 == std::string::npos) {
-            return std::nullopt;
-        }
-        size_t pos3 = line.find(',', pos2 + 1);
-        if (pos3 == std::string::npos) {
+        static const std::regex record_regex(R"(^([0-9]+),([^,]+),([0-9]+),(.*)$)");
+        std::smatch match;
+        if (!std::regex_match(line, match, record_regex)) {
             return std::nullopt;
         }
 
-        std::string id_str = line.substr(0, pos1);
-        std::string ts_str = line.substr(pos1 + 1, pos2 - (pos1 + 1));
-        std::string type_str = line.substr(pos2 + 1, pos3 - (pos2 + 1));
-        std::string details = line.substr(pos3 + 1);
+        std::string id_str = match[1].str();
+        std::string ts_str = match[2].str();
+        std::string type_str = match[3].str();
+        std::string details = match[4].str();
 
         Record rec{};
         rec.vehicle_id = static_cast<uint32_t>(std::stoul(id_str));

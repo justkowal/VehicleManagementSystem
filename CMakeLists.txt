@@ -124,7 +124,8 @@ add_test(NAME UnitTests COMMAND UnitTests)
 if(NOTCURSES_FOUND)
     install(
         TARGETS RentalSystem
-        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        COMPONENT Application
     )
 endif()
 
@@ -132,6 +133,7 @@ endif()
 install(
     DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}"
+    COMPONENT Application
     OPTIONAL  # data dir optional if not exists
     FILES_MATCHING PATTERN ".gitkeep"
 )
@@ -139,4 +141,58 @@ install(
 # create records dir at install
 install(
     DIRECTORY DESTINATION "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/records"
+    COMPONENT Application
 )
+
+# ==============================================================================
+# 📦 RUNTIME DYNAMIC PLUGIN EXTENSION (PRESENTATION EXCLUSIVE)
+# ==============================================================================
+
+# 1. Register the plugin target as a MODULE library (specifically optimized for dlopen)
+add_library(custom_printer_plugin MODULE src/plugins/CustomPrinter.cpp)
+
+# 2. Grant the plugin explicit access to interface definitions (like IPrinter.h)
+target_include_directories(custom_printer_plugin PRIVATE "${CMAKE_SOURCE_DIR}/include")
+
+# 3. CRITICAL: Isolate this target so a normal build cycle completely ignores it
+set_target_properties(custom_printer_plugin PROPERTIES 
+    EXCLUDE_FROM_ALL TRUE
+    # Automatically drops the compiled .so / .dll inside your live bin/ directory
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/plugins"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/plugins"
+)
+
+# 4. Enforce your strict static analysis styling onto the plugin codebase
+enable_clang_tidy(custom_printer_plugin)
+
+# 5. Register install rule specifically for the plugin component
+install(
+    TARGETS custom_printer_plugin
+    LIBRARY DESTINATION "${CMAKE_INSTALL_BINDIR}/plugins"
+    COMPONENT Plugins
+)
+
+# 6. Custom targets for component installation (to support Ninja and workflows)
+add_custom_target(install-app
+    COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --component Application
+    COMMENT "Installing application component..."
+)
+
+add_custom_target(install-plugin
+    COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --component Plugins
+    COMMENT "Installing plugins component..."
+)
+
+# 7. Uninstall target configuration
+if(NOT TARGET uninstall)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        IMMEDIATE @ONLY
+    )
+
+    add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        COMMENT "Uninstalling installed files..."
+    )
+endif()

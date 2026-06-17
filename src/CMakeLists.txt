@@ -55,6 +55,7 @@ if(NOTCURSES_FOUND)
         rental_engine
         notui
         PkgConfig::NOTCURSES
+        ${CMAKE_DL_LIBS}
     )
 
     target_compile_options(RentalSystem PRIVATE

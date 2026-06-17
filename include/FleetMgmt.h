@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <optional>
 #include <functional>
-#include <mutex>
+#include <shared_mutex>
 
 // rentalsession definition in Types.h
 
@@ -26,11 +26,23 @@ public:
 
     template<typename Predicate>
     auto searchFleet(Predicate pred, const std::optional<AdvancedFilter>& adv_filter = std::nullopt) const -> std::vector<Vehicle> {
+        std::shared_lock lock(mutex_);
         std::vector<Vehicle> results;
-        for (const auto& vehicle : getFleet()) {
+        for (const auto& vehicle : fleet_) {
             if (pred(vehicle)) {
-                if (!adv_filter.has_value() || adv_filter->matches(vehicle, getRentalCodeByVehicleId(vehicle.getId()))) {
+                if (!adv_filter.has_value()) {
                     results.push_back(vehicle);
+                } else {
+                    std::optional<std::string> rental_code = std::nullopt;
+                    for (const auto& [code, session] : active_rentals_) {
+                        if (session.vehicle_id == vehicle.getId()) {
+                            rental_code = code;
+                            break;
+                        }
+                    }
+                    if (adv_filter->matches(vehicle, rental_code)) {
+                        results.push_back(vehicle);
+                    }
                 }
             }
         }
@@ -52,7 +64,7 @@ private:
     std::function<std::chrono::system_clock::time_point()> now_fn_;
 
     // mutex protecting fleet data
-    mutable std::mutex mutex_;
+    mutable std::shared_mutex mutex_;
 
     static auto generateRentalCode() -> std::string;
 };

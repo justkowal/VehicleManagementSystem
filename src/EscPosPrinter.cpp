@@ -26,8 +26,8 @@ namespace {
 #ifdef _WIN32
 using socket_t = SOCKET;
 constexpr socket_t INVALID_SOCKET_VAL = INVALID_SOCKET;
-inline auto close_socket(socket_t s) -> int {
-    return closesocket(s);
+inline auto close_socket(socket_t socket_val) -> int {
+    return closesocket(socket_val);
 }
 
 struct WinsockInit {
@@ -45,8 +45,8 @@ static void ensureWinsock() {
 #else
 using socket_t = int;
 constexpr socket_t INVALID_SOCKET_VAL = -1;
-inline auto close_socket(socket_t s) -> int {
-    return ::close(s);
+inline auto close_socket(socket_t socket_val) -> int {
+    return ::close(socket_val);
 }
 #endif
 
@@ -197,10 +197,11 @@ EscPosPrinter::EscPosPrinter(std::string device_path) : device_path_(std::move(d
 auto EscPosPrinter::sendCommand(const std::string& payload) const -> void {
 
     // check if network address
-    size_t colon_pos = device_path_.find(':');
-    if (colon_pos != std::string::npos && colon_pos > 0 && isdigit(static_cast<unsigned char>(device_path_[colon_pos + 1])) != 0) {
-        std::string ip_addr = device_path_.substr(0, colon_pos);
-        int port = std::stoi(device_path_.substr(colon_pos + 1));
+    static const std::regex address_regex(R"(^([a-zA-Z0-9.-]+):([0-9]+)$)");
+    std::smatch match;
+    if (std::regex_match(device_path_, match, address_regex)) {
+        std::string ip_addr = match[1].str();
+        int port = std::stoi(match[2].str());
 
         if (tryNetworkSend(ip_addr, port, payload)) {
             return;
