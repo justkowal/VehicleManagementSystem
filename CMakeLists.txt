@@ -42,20 +42,8 @@ FetchContent_MakeAvailable(Catch2)
 file(WRITE "${CMAKE_BINARY_DIR}/_deps/.clang-tidy" "Checks: '-*'\n")
 
 # system dependencies
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(NOTCURSES IMPORTED_TARGET notcurses)
-else()
-    if(WIN32 OR MINGW)
-        message(WARNING "pkg-config not found. TUI targets (RentalSystem, demo_notui) will be skipped. If you are using MSYS2/MinGW, install it with: pacman -S mingw-w64-x86_64-pkgconf")
-    endif()
-endif()
-
-if(PkgConfig_FOUND AND NOT NOTCURSES_FOUND)
-    if(WIN32 OR MINGW)
-        message(WARNING "notcurses not found. TUI targets (RentalSystem, demo_notui) will be skipped. If you are using MSYS2/MinGW, install it with: pacman -S mingw-w64-x86_64-notcurses")
-    endif()
-endif()
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(NOTCURSES REQUIRED IMPORTED_TARGET notcurses)
 
 # static analysis
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
@@ -76,9 +64,7 @@ function(enable_clang_tidy target)
 endfunction()
 
 # subdirectories
-if(NOTCURSES_FOUND)
-    add_subdirectory(libs/notui)
-endif()
+add_subdirectory(libs/notui)
 add_subdirectory(src)
 
 # testing
@@ -86,22 +72,17 @@ include(CTest)
 enable_testing()
 
 # list test sources explicitly
-set(TEST_SOURCES
+add_executable(UnitTests
     tests/test_vehicle.cpp
     tests/test_filestorage.cpp
     tests/test_fleet.cpp
     tests/test_codegen.cpp
     tests/test_concurrency.cpp
+    tests/test_notui.cpp
     tests/test_storage_failures.cpp
     tests/test_time_anomalies.cpp
     tests/test_validation.cpp
 )
-if(NOTCURSES_FOUND)
-    list(APPEND TEST_SOURCES tests/test_notui.cpp)
-endif()
-
-add_executable(UnitTests ${TEST_SOURCES})
-
 
 target_include_directories(UnitTests PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
@@ -110,24 +91,20 @@ target_include_directories(UnitTests PRIVATE
 
 target_link_libraries(UnitTests PRIVATE
     rental_engine
+    notui
     Catch2::Catch2WithMain
 )
-if(NOTCURSES_FOUND)
-    target_link_libraries(UnitTests PRIVATE notui)
-endif()
 
 # ctest excluded from clang-tidy to avoid false-positives
 add_test(NAME UnitTests COMMAND UnitTests)
 
 # install rules
-# install application binary
-if(NOTCURSES_FOUND)
-    install(
-        TARGETS RentalSystem
-        DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT Application
-    )
-endif()
+install(
+    TARGETS RentalSystem
+    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    COMPONENT Application
+)
+
 
 # install data skeleton
 install(
