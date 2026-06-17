@@ -1,0 +1,49 @@
+name: Release Builds
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libnotcurses-dev rpm
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build project
+        run: |
+          cmake --build build --parallel $(nproc)
+          cmake --build build --target custom_printer_plugin --parallel $(nproc)
+
+      - name: Run CPack to generate packages
+        run: |
+          cd build
+          cpack -G "TGZ;DEB;RPM"
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/VehicleRentalSystem-*.tar.gz
+            build/VehicleRentalSystem-*.deb
+            build/VehicleRentalSystem-*.rpm
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

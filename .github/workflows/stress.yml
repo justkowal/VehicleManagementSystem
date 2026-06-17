@@ -31,8 +31,10 @@ jobs:
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
-      - name: Build UnitTests
-        run: cmake --build build --target UnitTests -- -j
+      - name: Build project
+        run: |
+          cmake --build build -- -j
+          cmake --build build --target custom_printer_plugin -- -j
 
       - name: Run stress tests
         env:

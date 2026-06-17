@@ -169,3 +169,24 @@ if(NOT TARGET uninstall)
         COMMENT "Uninstalling installed files..."
     )
 endif()
+
+# ==============================================================================
+# 📦 CPACK PACKAGING CONFIGURATION
+# ==============================================================================
+set(CPACK_PACKAGE_NAME "VehicleRentalSystem")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_VENDOR "Fake Vehicle Rental Sp. z o.o.")
+set(CPACK_PACKAGE_CONTACT "kowal.dev@protonmail.com")
+
+# Enable generators
+set(CPACK_GENERATOR "TGZ;DEB;RPM")
+
+# Debian specific settings
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jakub Kowal <kowal.dev@protonmail.com>")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+# RPM specific settings
+set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+
+include(CPack)

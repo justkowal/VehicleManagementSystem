@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build:
@@ -14,7 +14,6 @@ jobs:
         with:
           submodules: recursive
 
-
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -23,8 +22,10 @@ jobs:
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build UnitTests
-        run: cmake --build build --target UnitTests -- -j
+      - name: Build project
+        run: |
+          cmake --build build -- -j
+          cmake --build build --target custom_printer_plugin -- -j
 
       - name: Run fast tests (exclude stress)
-        run: ./build/UnitTests ~[stress] -s
+        run: ./build/bin/UnitTests "~[stress]" -s
