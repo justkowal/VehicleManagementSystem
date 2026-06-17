@@ -1,3 +1,34 @@
+<p align="center">
+  <a href="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/ci.yml">
+    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline Status"/>
+  </a>
+  <a href="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/stress.yml">
+    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/stress.yml/badge.svg" alt="Thread Stress Tests"/>
+  </a>
+  <a href="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/release.yml">
+    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/release.yml/badge.svg" alt="Automated CD Deployment"/>
+  </a>
+  <img src="https://img.shields.io/github/v/release/justkowal/VehicleManagementSystem?color=9400D3&style=flat-square" alt="Latest Stable Version"/>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Language-C%2B%2B20-00599C?style=flat-square&logo=cplusplus&logoColor=white" alt="ISO C++20 Standard Enforced"/>
+  <img src="https://img.shields.io/badge/Build%20System-CMake%20Presets%20v6-064F8C?style=flat-square&logo=cmake&logoColor=white" alt="CMake Presets Configuration"/>
+  <img src="https://img.shields.io/badge/Static%20Analysis-Clang--Tidy-8F05F5?style=flat-square&logo=llvm" alt="Clang-Tidy Rules Active"/>
+  <img src="https://img.shields.io/badge/Code%20Style-Clang--Format-8F05F5?style=flat-square&logo=llvm" alt="Clang-Format Style Enforced"/>
+  <img src="https://img.shields.io/badge/Test%20Harness-Catch2-orange?style=flat-square" alt="Catch2 Unit Testing Framework"/>
+  <img src="https://img.shields.io/badge/Packages-DEB%20%7C%20RPM%20%7C%20TGZ-brightgreen?style=flat-square&logo=cmake" alt="CPack Distribution Formats Ready"/>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/tokei/lines/github/justkowal/VehicleManagementSystem?style=flat-square&color=blue" alt="Total Code Volume Lines"/>
+  <img src="https://img.shields.io/github/repo-size/justkowal/VehicleManagementSystem?style=flat-square&color=orange" alt="Disk Footprint on GitHub"/>
+  <img src="https://img.shields.io/github/last-commit/justkowal/VehicleManagementSystem?style=flat-square&color=brightgreen" alt="Active Maintenance Telemetry"/>
+  <img src="https://img.shields.io/badge/AGH%20University-PL--II%20Project-7D2232?style=flat-square" alt="AGH University Programming Languages II Laboratory Track"/>
+</p>
+
+---
+
 # Vehicle Management System
 
 ## Overview
