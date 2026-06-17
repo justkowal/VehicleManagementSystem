@@ -26,11 +26,7 @@ namespace {
     auto formatTimeISO(const std::chrono::system_clock::time_point& timepoint) -> std::string {
         std::time_t time_t_val = std::chrono::system_clock::to_time_t(timepoint);
         std::tm tm_struct{};
-#ifdef _WIN32
-        gmtime_s(&tm_struct, &time_t_val);
-#else
         gmtime_r(&time_t_val, &tm_struct);
-#endif
         std::ostringstream oss;
         oss << std::put_time(&tm_struct, "%Y-%m-%dT%H:%M:%SZ");
         return oss.str();
@@ -43,12 +39,7 @@ namespace {
         if (iss.fail()) {
             return std::nullopt;
         }
-#ifdef _WIN32
-    // windows uses mkgmtime
-    std::time_t time_t_val = _mkgmtime(&tm_struct);
-#else
         std::time_t time_t_val = timegm(&tm_struct);
-#endif
         return std::chrono::system_clock::from_time_t(time_t_val);
     }
 }

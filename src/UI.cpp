@@ -209,11 +209,7 @@ LogsModal::LogsModal(std::string title, const std::vector<Record>& records,
 
             std::time_t raw_time = std::chrono::system_clock::to_time_t(rec.timestamp);
             std::tm tm_struct{};
-#ifdef _WIN32
-            gmtime_s(&tm_struct, &raw_time);
-#else
             gmtime_r(&raw_time, &tm_struct);
-#endif
             std::array<char, 20> buffer{};
             std::strftime(buffer.data(), buffer.size(), "%m-%d %H:%M", &tm_struct);
             std::string time_str(buffer.data());
@@ -1393,11 +1389,7 @@ auto UI::rebuild_details_panel() -> void {
 
                 std::time_t raw_time = std::chrono::system_clock::to_time_t(log.timestamp);
                 std::tm tm_struct{};
-#ifdef _WIN32
-                gmtime_s(&tm_struct, &raw_time);
-#else
                 gmtime_r(&raw_time, &tm_struct);
-#endif
                 std::array<char, 20> buffer{};
                 std::strftime(buffer.data(), buffer.size(), "%m-%d %H:%M", &tm_struct);
                 std::string time_str(buffer.data());

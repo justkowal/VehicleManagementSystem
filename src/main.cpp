@@ -63,13 +63,11 @@ auto main(int argc, char** argv) -> int {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
     // Load plugins first so they are registered before help screen or configuration validation
-#ifndef _WIN32
     std::error_code err_code;
     auto exe_path = std::filesystem::read_symlink("/proc/self/exe", err_code);
     if (!err_code) {
         loadRuntimePlugins(exe_path.parent_path() / "plugins");
     }
-#endif
     loadRuntimePlugins(std::filesystem::current_path() / "plugins");
     loadRuntimePlugins(std::filesystem::current_path() / "build/bin/plugins");
 

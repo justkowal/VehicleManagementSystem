@@ -8,13 +8,8 @@
 #include <system_error>
 #include <regex>
 
-#ifdef _WIN32
-#include <shlobj.h>
-#include <windows.h>
-#else
 #include <pwd.h>
 #include <unistd.h>
-#endif
 
 namespace fs = std::filesystem;
 
@@ -63,16 +58,6 @@ auto trim(std::string_view str) -> std::string {
 // platform default data directory
 auto AppPaths::platformDefaultDataDir() -> fs::path {
 #if defined(NDEBUG) // release build
-
-#if defined(_WIN32)
-    // NOLINTNEXTLINE(concurrency-mt-unsafe) - called once before threads
-    const char* appdata = std::getenv("APPDATA");
-    if (appdata != nullptr) {
-        return fs::path(appdata) / "VehicleRentalSystem";
-    }
-    return fs::current_path() / "data";
-
-#else
     // NOLINTNEXTLINE(concurrency-mt-unsafe) — called once at startup before any threads
     const char* xdg = std::getenv("XDG_DATA_HOME");
     if (xdg != nullptr && xdg[0] != '\0') {
@@ -92,8 +77,6 @@ auto AppPaths::platformDefaultDataDir() -> fs::path {
     }
 
     return fs::current_path() / "data";
-#endif
-
 #else  // debug build
     return {"data"};
 #endif
@@ -149,12 +132,8 @@ auto AppPaths::printHelp(const char* prog_name, std::ostream& out_stream) -> voi
         << "  --help, -h                Show this message\n"
         << "\nData directory (default):\n"
 #if defined(NDEBUG)
-#if defined(_WIN32)
-        << "  Release build:  %APPDATA%\\VehicleRentalSystem\n"
-#else
         << "  Release build:  $XDG_DATA_HOME/VehicleRentalSystem\n"
         << "                  (~/.local/share/VehicleRentalSystem if XDG_DATA_HOME unset)\n"
-#endif
 #else
         << "  Debug build:    ./data\n"
 #endif

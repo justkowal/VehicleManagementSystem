@@ -50,11 +50,7 @@ auto Logger::log(LogLevel level, const std::string& message, const std::string& 
     auto now = std::chrono::system_clock::now();
     auto time_t_now = std::chrono::system_clock::to_time_t(now);
     std::tm tm_struct{};
-#ifdef _WIN32
-    localtime_s(&tm_struct, &time_t_now);
-#else
     localtime_r(&time_t_now, &tm_struct);
-#endif
 
     std::ostringstream oss;
     oss << std::put_time(&tm_struct, "%Y-%m-%d %H:%M:%S");
