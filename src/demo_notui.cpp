@@ -175,7 +175,7 @@ auto main() -> int {
     auto root = std::make_shared<VBox>();
     root->style.bg({15, 15, 20}).pad({1, 1, 1, 1});
 
-    auto header = std::make_shared<Label>("Vehicle Management System v1.1", Size{3, 0}, true);
+    auto header = std::make_shared<Label>("Vehicle Management System v1.2", Size{3, 0}, true);
     header->style.bg({40, 80, 200}).fg({255, 255, 255}).frame(true, true).attr(NCSTYLE_BOLD);
     header->flex = 0;
     root->add_child(header);
