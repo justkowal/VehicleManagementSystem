@@ -4,7 +4,7 @@
     "features": {
         "ghcr.io/devcontainers/features/github-cli:1": {}
     },
-    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake pkg-config libnotcurses-dev libnotcurses-core-dev clang-tidy socat",
+    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake pkg-config libnotcurses-dev libnotcurses-core-dev clang-tidy socat rpm",
     "customizations": {
         "vscode": {
             "settings": {
