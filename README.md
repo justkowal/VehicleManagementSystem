@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Vehicle Management System is a C++ app built with a big focus on decoupling, thread safety and modularity. Instead of using standard terminal interfaces that mix domain logic with console output, this project brings in `notui`—a custom abstract layout rendering framework built on top of the `notcurses` library.
+The Vehicle Management System is a C++ app built with a big focus on decoupling, thread safety and modularity. Instead of using standard terminal interfaces that mix domain logic with console output, this project brings in `notui` - a custom abstract layout rendering framework built on top of the `notcurses` library.
 
 This separation strictly isolates the core business logic from the mess of terminal I/O. By treating the UI as its own separate rendering target, the app is much easier to test and maintain, and its open to future extensions without breaking the underlying state management.
 
