@@ -44,6 +44,11 @@ file(WRITE "${CMAKE_BINARY_DIR}/_deps/.clang-tidy" "Checks: '-*'\n")
 # system dependencies
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
+    if(MINGW)
+        set(PKG_CONFIG_STATIC ON)
+        add_compile_definitions(NCURSES_STATIC)
+        link_directories("${CMAKE_CURRENT_SOURCE_DIR}/libs/mingw64/lib")
+    endif()
     pkg_check_modules(NOTCURSES IMPORTED_TARGET notcurses)
 else()
     if(WIN32 OR MINGW)
@@ -59,6 +64,9 @@ endif()
 
 # static analysis
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+if(CMAKE_CROSSCOMPILING)
+    set(CLANG_TIDY_EXE OFF)
+endif()
 if(CLANG_TIDY_EXE)
     message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
 else()
@@ -99,6 +107,9 @@ set(TEST_SOURCES
 if(NOTCURSES_FOUND)
     list(APPEND TEST_SOURCES tests/test_notui.cpp)
 endif()
+if(MINGW)
+    list(APPEND TEST_SOURCES libs/notui/src/WinCompat.cpp)
+endif()
 
 add_executable(UnitTests ${TEST_SOURCES})
 
@@ -114,6 +125,11 @@ target_link_libraries(UnitTests PRIVATE
 )
 if(NOTCURSES_FOUND)
     target_link_libraries(UnitTests PRIVATE notui)
+endif()
+
+if(MINGW)
+    target_link_options(UnitTests PRIVATE -static)
+    target_link_libraries(UnitTests PRIVATE pthread)
 endif()
 
 # ctest excluded from clang-tidy to avoid false-positives
@@ -164,6 +180,10 @@ set_target_properties(custom_printer_plugin PROPERTIES
 
 # 4. Enforce your strict static analysis styling onto the plugin codebase
 enable_clang_tidy(custom_printer_plugin)
+
+if(MINGW)
+    target_link_options(custom_printer_plugin PRIVATE -static)
+endif()
 
 # 5. Register install rule specifically for the plugin component
 install(

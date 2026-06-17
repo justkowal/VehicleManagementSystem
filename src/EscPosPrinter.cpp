@@ -11,6 +11,9 @@
 
 // socket includes
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
@@ -171,7 +174,7 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
     if (res == 0) {
         // set blocking
 #ifdef _WIN32
-        u_long mode = 0;
+        mode = 0;
         ioctlsocket(sock, FIONBIO, &mode);
 #else
         if (flags >= 0) {

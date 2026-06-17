@@ -8,10 +8,7 @@
 #include <system_error>
 #include <regex>
 
-#ifdef _WIN32
-#include <shlobj.h>
-#include <windows.h>
-#else
+#ifndef _WIN32
 #include <pwd.h>
 #include <unistd.h>
 #endif
