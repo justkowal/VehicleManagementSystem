@@ -121,42 +121,37 @@ install(
     COMPONENT Application
 )
 
-# 1. Register the plugin target as a MODULE library (specifically optimized for dlopen)
+# Plugin
 add_library(custom_printer_plugin MODULE src/plugins/CustomPrinter.cpp)
 
-# 2. Grant the plugin explicit access to interface definitions (like IPrinter.h)
 target_include_directories(custom_printer_plugin PRIVATE "${CMAKE_SOURCE_DIR}/include")
 
-# 3. CRITICAL: Isolate this target so a normal build cycle completely ignores it
 set_target_properties(custom_printer_plugin PROPERTIES 
     EXCLUDE_FROM_ALL TRUE
-    # Automatically drops the compiled .so / .dll inside your live bin/ directory
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/plugins"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/plugins"
 )
 
-# 4. Enforce your strict static analysis styling onto the plugin codebase
 enable_clang_tidy(custom_printer_plugin)
 
-# 5. Register install rule specifically for the plugin component
 install(
     TARGETS custom_printer_plugin
     LIBRARY DESTINATION "${CMAKE_INSTALL_BINDIR}/plugins"
     COMPONENT Plugins
 )
 
-# 6. Custom targets for component installation (to support Ninja and workflows)
 add_custom_target(install-app
+    DEPENDS RentalSystem rental_engine
     COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --component Application
     COMMENT "Installing application component..."
 )
 
 add_custom_target(install-plugin
+    DEPENDS custom_printer_plugin
     COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --component Plugins
     COMMENT "Installing plugins component..."
 )
 
-# 7. Uninstall target configuration
 if(NOT TARGET uninstall)
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
@@ -170,23 +165,19 @@ if(NOT TARGET uninstall)
     )
 endif()
 
-# ==============================================================================
-# 📦 CPACK PACKAGING CONFIGURATION
-# ==============================================================================
+# Packaging 
+
 set(CPACK_PACKAGE_NAME "VehicleRentalSystem")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
-set(CPACK_PACKAGE_VENDOR "Fake Vehicle Rental Sp. z o.o.")
+set(CPACK_PACKAGE_VENDOR "justkowal")
 set(CPACK_PACKAGE_CONTACT "kowal.dev@protonmail.com")
 
-# Enable generators
 set(CPACK_GENERATOR "TGZ;DEB;RPM")
 
-# Debian specific settings
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jakub Kowal <kowal.dev@protonmail.com>")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 
-# RPM specific settings
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
 
 include(CPack)
