@@ -121,10 +121,6 @@ install(
     COMPONENT Application
 )
 
-# ==============================================================================
-# 📦 RUNTIME DYNAMIC PLUGIN EXTENSION (PRESENTATION EXCLUSIVE)
-# ==============================================================================
-
 # 1. Register the plugin target as a MODULE library (specifically optimized for dlopen)
 add_library(custom_printer_plugin MODULE src/plugins/CustomPrinter.cpp)
 
