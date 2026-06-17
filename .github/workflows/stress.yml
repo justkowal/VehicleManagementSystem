@@ -38,4 +38,4 @@ jobs:
         env:
           VMS_STRESS_ITERS: ${{ github.event.inputs.stress_iters || '10000' }}
           VMS_CONCURRENCY_THREADS: ${{ github.event.inputs.concurrency_threads || '50' }}
-        run: ./build/UnitTests -s
+        run: ./build/bin/UnitTests -s
