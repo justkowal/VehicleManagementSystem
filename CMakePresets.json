@@ -28,7 +28,8 @@
       "name": "default",
       "displayName": "Build All Standard",
       "description": "Builds the standard targets (excluding dynamic plugins)",
-      "configurePreset": "default"
+      "configurePreset": "default",
+      "jobs": 0
     },
     {
       "name": "plugin",
@@ -37,13 +38,15 @@
       "configurePreset": "default",
       "targets": [
         "custom_printer_plugin"
-      ]
+      ],
+      "jobs": 0
     },
     {
       "name": "debug",
       "displayName": "Build Debug",
       "description": "Builds debug targets",
-      "configurePreset": "debug"
+      "configurePreset": "debug",
+      "jobs": 0
     },
     {
       "name": "install-app-target",
@@ -52,7 +55,8 @@
       "configurePreset": "default",
       "targets": [
         "install-app"
-      ]
+      ],
+      "jobs": 0
     },
     {
       "name": "install-plugin-target",
@@ -61,7 +65,8 @@
       "configurePreset": "default",
       "targets": [
         "install-plugin"
-      ]
+      ],
+      "jobs": 0
     },
     {
       "name": "uninstall",
@@ -70,7 +75,8 @@
       "configurePreset": "default",
       "targets": [
         "uninstall"
-      ]
+      ],
+      "jobs": 0
     }
   ],
   "testPresets": [
