@@ -42,33 +42,22 @@ endif()
 
 if(NOTCURSES_FOUND)
     # RentalSystem main application
-    set(RENTAL_SYSTEM_SOURCES
+    add_executable(RentalSystem
         main.cpp
         UI.cpp
     )
-    if(MINGW)
-        list(APPEND RENTAL_SYSTEM_SOURCES "${CMAKE_SOURCE_DIR}/libs/notui/src/WinCompat.cpp")
-    endif()
-    add_executable(RentalSystem ${RENTAL_SYSTEM_SOURCES})
- 
+
     target_include_directories(RentalSystem PRIVATE
         "${CMAKE_SOURCE_DIR}/include"
     )
- 
-    if(MINGW)
-        target_link_libraries(RentalSystem PRIVATE
-            rental_engine
-            notui
-        )
-    else()
-        target_link_libraries(RentalSystem PRIVATE
-            rental_engine
-            notui
-            PkgConfig::NOTCURSES
-            ${CMAKE_DL_LIBS}
-        )
-    endif()
- 
+
+    target_link_libraries(RentalSystem PRIVATE
+        rental_engine
+        notui
+        PkgConfig::NOTCURSES
+        ${CMAKE_DL_LIBS}
+    )
+
     target_compile_options(RentalSystem PRIVATE
         $<$<CONFIG:Debug>:
             -Wall
@@ -87,24 +76,13 @@ if(NOTCURSES_FOUND)
             -Werror
         >
     )
- 
+
     enable_clang_tidy(RentalSystem)
- 
+
     # demo_notui developer demo
-    set(DEMO_NOTUI_SOURCES
+    add_executable(demo_notui
         demo_notui.cpp
     )
-    if(MINGW)
-        list(APPEND DEMO_NOTUI_SOURCES "${CMAKE_SOURCE_DIR}/libs/notui/src/WinCompat.cpp")
-    endif()
-    add_executable(demo_notui ${DEMO_NOTUI_SOURCES})
- 
-    target_link_libraries(demo_notui PRIVATE notui)
 
-    if(MINGW)
-        target_link_options(RentalSystem PRIVATE -static)
-        target_link_options(demo_notui PRIVATE -static)
-        target_link_libraries(RentalSystem PRIVATE pthread)
-        target_link_libraries(demo_notui PRIVATE pthread)
-    endif()
+    target_link_libraries(demo_notui PRIVATE notui)
 endif()

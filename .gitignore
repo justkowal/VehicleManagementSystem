@@ -28,5 +28,3 @@ vms.log
 
 # Other temporary/local test files
 test_notcurses.cpp
-
-libs/mingw64

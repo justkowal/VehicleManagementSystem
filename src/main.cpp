@@ -8,17 +8,7 @@
 
 #include <cstdlib>
 #include <ctime>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#else
 #include <dlfcn.h>
-#endif
 #include <filesystem>
 #include <memory>
 #include <vector>
@@ -30,42 +20,20 @@ auto loadRuntimePlugins(const std::filesystem::path& plugins_path) -> void {
         return;
     }
 
-#ifdef _WIN32
-    const std::filesystem::path extension = ".dll";
-#else
-    const std::filesystem::path extension = ".so";
-#endif
-
     for (const auto& entry : std::filesystem::directory_iterator(plugins_path)) {
-        if (entry.path().extension() == extension) {
-#ifdef _WIN32
-            HMODULE handle = LoadLibraryW(entry.path().c_str());
-            if (handle == nullptr) {
-                continue;
-            }
-            using CreatorSignature = IPrinter* (*)(const char*);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            auto create_fn = reinterpret_cast<CreatorSignature>(GetProcAddress(handle, "create_printer"));
-#pragma GCC diagnostic pop
-#else
+        if (entry.path().extension() == ".so") {
             void* handle = dlopen(entry.path().c_str(), RTLD_LAZY);
             if (handle == nullptr) {
                 continue;
             }
-            using CreatorSignature = IPrinter* (*)(const char*);
+
+            using CreatorSignature = auto (*)(const char*)->IPrinter*;
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             auto create_fn = reinterpret_cast<CreatorSignature>(dlsym(handle, "create_printer"));
-#endif
 
             if (create_fn != nullptr) {
                 // Keep the library handle open
-#ifdef _WIN32
-                static std::vector<HMODULE> handles;
-#else
                 static std::vector<void*> handles;
-#endif
                 handles.push_back(handle);
 
                 std::string name = entry.path().stem().string();
@@ -83,11 +51,7 @@ auto loadRuntimePlugins(const std::filesystem::path& plugins_path) -> void {
                     },
                     nullptr, false);
             } else {
-#ifdef _WIN32
-                FreeLibrary(handle);
-#else
                 dlclose(handle);
-#endif
             }
         }
     }
@@ -99,12 +63,7 @@ auto main(int argc, char** argv) -> int {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
     // Load plugins first so they are registered before help screen or configuration validation
-#ifdef _WIN32
-    wchar_t path[MAX_PATH];
-    GetModuleFileNameW(NULL, path, MAX_PATH);
-    std::filesystem::path exe_path(path);
-    loadRuntimePlugins(exe_path.parent_path() / "plugins");
-#else
+#ifndef _WIN32
     std::error_code err_code;
     auto exe_path = std::filesystem::read_symlink("/proc/self/exe", err_code);
     if (!err_code) {
@@ -113,7 +72,6 @@ auto main(int argc, char** argv) -> int {
 #endif
     loadRuntimePlugins(std::filesystem::current_path() / "plugins");
     loadRuntimePlugins(std::filesystem::current_path() / "build/bin/plugins");
-    loadRuntimePlugins(std::filesystem::current_path() / "build-win/bin/plugins");
 
     // handle help first
     if (AppPaths::handleHelp(argc, argv)) {

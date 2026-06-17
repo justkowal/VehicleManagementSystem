@@ -45,7 +45,6 @@ TEST_CASE("FileStorage basic save/load and malformed handling", "[filestorage]")
     fs::remove_all(tmp);
 }
 
-#ifndef _WIN32
 TEST_CASE("FileStorage directory creation failure throws", "[filestorage][failure]") {
     auto parent = fs::temp_directory_path() / fs::path("vms_test_parent_");
     parent += std::to_string(std::hash<std::string>{}(parent.string()));
@@ -70,7 +69,6 @@ TEST_CASE("FileStorage directory creation failure throws", "[filestorage][failur
 
     REQUIRE(threw == true);
 }
-#endif
 
 TEST_CASE("FileStorage serialization and deserialization of Bike and Truck variants", "[filestorage]") {
     auto tmp_dir = fs::temp_directory_path() / fs::path("vms_test_variants_");
