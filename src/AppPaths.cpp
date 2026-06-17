@@ -19,6 +19,7 @@ fs::path    AppPaths::data_dir_;
 std::string AppPaths::storage_name_;
 std::string AppPaths::printer_name_;
 std::string AppPaths::printer_device_;
+bool        AppPaths::massive_init_ = false;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 // internal helpers
@@ -129,6 +130,7 @@ auto AppPaths::printHelp(const char* prog_name, std::ostream& out_stream) -> voi
         << "  --printer-device <addr>   Device address / path (default: "
         <<                               DEFAULT_PRINTER_DEVICE << ")\n"
         << "\nOther:\n"
+        << "  --massive-init            Create a massive initial database of 10,000 vehicles if empty\n"
         << "  --help, -h                Show this message\n"
         << "\nData directory (default):\n"
 #if defined(NDEBUG)
@@ -278,6 +280,11 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
+    if (arg == "--massive-init") {
+        out_args.massive_init = true;
+        return true;
+    }
+
     // help flags (handled in handleHelp)
     if (arg == "--help" || arg == "-h") {
         return true;
@@ -368,6 +375,7 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
     storage_name_   = resolved_storage;
     printer_name_   = resolved_printer;
     printer_device_ = resolved_device;
+    massive_init_   = args.massive_init;
 
     return true;
 }
@@ -377,3 +385,4 @@ auto AppPaths::dataDir()       -> const fs::path&   { return data_dir_; }
 auto AppPaths::storageName()   -> const std::string& { return storage_name_; }
 auto AppPaths::printerName()   -> const std::string& { return printer_name_; }
 auto AppPaths::printerDevice() -> const std::string& { return printer_device_; }
+auto AppPaths::massiveInit()   -> bool { return massive_init_; }

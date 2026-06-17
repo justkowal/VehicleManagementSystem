@@ -14,6 +14,7 @@ public:
         std::string storage_arg;
         std::string printer_arg;
         std::string device_arg;
+        bool massive_init = false;
     };
 
     AppPaths() = delete;
@@ -33,6 +34,7 @@ public:
     [[nodiscard]] static auto storageName()   -> const std::string&;
     [[nodiscard]] static auto printerName()   -> const std::string&;
     [[nodiscard]] static auto printerDevice() -> const std::string&;
+    [[nodiscard]] static auto massiveInit()   -> bool;
 
 private:
     static auto platformDefaultDataDir() -> std::filesystem::path;
@@ -62,4 +64,6 @@ private:
     static std::string printer_name_;
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static std::string printer_device_;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    static bool massive_init_;
 };

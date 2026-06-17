@@ -91,16 +91,50 @@ auto main(int argc, char** argv) -> int {
     // populate default fleet on first launch
     {
         auto init_storage = StorageRegistry::create(storage_name, data_path);
-        FleetManager init_mgr(std::move(init_storage));
-        if (init_mgr.getFleet().empty()) {
-            init_mgr.addVehicle(
-                Vehicle(Car{101, "Tesla", "Model S", 5, 2500, VehicleStatus::Available}));
-            init_mgr.addVehicle(
-                Vehicle(Car{102, "Toyota", "Prius", 5, 1500, VehicleStatus::Available}));
-            init_mgr.addVehicle(
-                Vehicle(Bike{103, "Giant", "Escape", 500, VehicleStatus::Available}));
-            init_mgr.addVehicle(
-                Vehicle(Truck{104, "Volvo", "FH16", 25000, 5000, VehicleStatus::Available}));
+        auto current_fleet = init_storage->loadFleet();
+        if (current_fleet.empty()) {
+            if (AppPaths::massiveInit()) {
+                std::vector<Vehicle> massive_fleet;
+                massive_fleet.reserve(10000);
+                for (uint32_t i = 1; i <= 10000; ++i) {
+                    uint32_t type_selector = i % 3;
+                    if (type_selector == 0) {
+                        Car car{};
+                        car.id = i;
+                        car.brand = "BrandCar" + std::to_string(i);
+                        car.model = "ModelCar" + std::to_string(i);
+                        car.seats = static_cast<uint8_t>(2 + (i % 7));
+                        car.price_per_hour = static_cast<int>(1000 + (i % 9000));
+                        car.status = VehicleStatus::Available;
+                        massive_fleet.emplace_back(car);
+                    } else if (type_selector == 1) {
+                        Bike bike{};
+                        bike.id = i;
+                        bike.brand = "BrandBike" + std::to_string(i);
+                        bike.type = "TypeBike" + std::to_string(i);
+                        bike.price_per_hour = static_cast<int>(200 + (i % 800));
+                        bike.status = VehicleStatus::Available;
+                        massive_fleet.emplace_back(bike);
+                    } else {
+                        Truck truck{};
+                        truck.id = i;
+                        truck.brand = "BrandTruck" + std::to_string(i);
+                        truck.model = "ModelTruck" + std::to_string(i);
+                        truck.payload_capacity_kg = 1000 + (i % 20000);
+                        truck.price_per_hour = static_cast<int>(3000 + (i % 17000));
+                        truck.status = VehicleStatus::Available;
+                        massive_fleet.emplace_back(truck);
+                    }
+                }
+                init_storage->saveFleet(massive_fleet);
+            } else {
+                std::vector<Vehicle> default_fleet;
+                default_fleet.emplace_back(Car{101, "Tesla", "Model S", 5, 2500, VehicleStatus::Available});
+                default_fleet.emplace_back(Car{102, "Toyota", "Prius", 5, 1500, VehicleStatus::Available});
+                default_fleet.emplace_back(Bike{103, "Giant", "Escape", 500, VehicleStatus::Available});
+                default_fleet.emplace_back(Truck{104, "Volvo", "FH16", 25000, 5000, VehicleStatus::Available});
+                init_storage->saveFleet(default_fleet);
+            }
         }
     }
 
