@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/tokei/lines/github/justkowal/VehicleManagementSystem?style=flat-square&color=blue" alt="Total Code Volume Lines"/>
+  <img src="https://tokei.rs/b1/github/justkowal/VehicleManagementSystem?category=code" alt="Total Code Volume Lines"/>
   <img src="https://img.shields.io/github/repo-size/justkowal/VehicleManagementSystem?style=flat-square&color=orange" alt="Disk Footprint on GitHub"/>
   <img src="https://img.shields.io/github/last-commit/justkowal/VehicleManagementSystem?style=flat-square&color=brightgreen" alt="Active Maintenance Telemetry"/>
   <img src="https://img.shields.io/badge/AGH%20University-PL--II%20Project-7D2232?style=flat-square" alt="AGH University Programming Languages II Laboratory Track"/>
