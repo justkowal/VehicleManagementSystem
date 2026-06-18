@@ -59,6 +59,7 @@ auto UI::handle_global_shortcuts(const ncinput& nc_input) -> bool {
     if (is_n) {
         auto modal_holder = std::make_shared<std::shared_ptr<RegisterVehicleModal>>();
         *modal_holder = std::make_shared<RegisterVehicleModal>(
+            [this](uint32_t vehicle_id) { return this->manager_.idExists(vehicle_id); },
             [this, modal_holder](const std::optional<Vehicle>& vehicle_opt) {
                 this->root_->remove_child(*modal_holder);
                 this->compositor_->trigger_layout();
@@ -221,6 +222,7 @@ auto UI::build_ui() -> void {
     auto add_vehicle_btn = std::make_shared<Button>("Register New Vehicle", [this]() {
         auto modal_holder = std::make_shared<std::shared_ptr<RegisterVehicleModal>>();
         *modal_holder = std::make_shared<RegisterVehicleModal>(
+            [this](uint32_t vehicle_id) { return this->manager_.idExists(vehicle_id); },
             [this, modal_holder](const std::optional<Vehicle>& vehicle_opt) {
                 this->root_->remove_child(*modal_holder);
                 this->compositor_->trigger_layout();

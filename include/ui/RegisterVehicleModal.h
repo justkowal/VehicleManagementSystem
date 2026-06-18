@@ -7,5 +7,7 @@
 
 class RegisterVehicleModal : public notui::Modal {
 public:
-    explicit RegisterVehicleModal(const std::function<void(std::optional<Vehicle>)>& callback);
+    explicit RegisterVehicleModal(
+        const std::function<bool(uint32_t)>& id_exists_fn,
+        const std::function<void(std::optional<Vehicle>)>& callback);
 };

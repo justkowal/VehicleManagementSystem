@@ -20,8 +20,8 @@ class CustomPrinterPlugin : public IPrinter {
         std::ostream& target = out.is_open() ? out : std::cout;
 
         target << "\n====================================\n";
-        target << "  [DYNAMIC PLUGIN] PREPARATION OK  \n";
-        target << " VEHICLE:  " << vehicle_name << "\n";
+        target << "     [DYNAMIC PLUGIN] VEHICLE RENTED  \n";
+        target << "VEHICLE:  " << vehicle_name << "\n";
         target << " AUTH:     " << code << "\n";
         target << " CUSTOMER: " << name << " " << surname << "\n";
         if (!id_card.empty()) {
@@ -38,7 +38,7 @@ class CustomPrinterPlugin : public IPrinter {
         std::ostream& target = out.is_open() ? out : std::cout;
 
         target << "\n====================================\n";
-        target << "   [DYNAMIC PLUGIN] TRANSACTION CLOSURE  \n";
+        target << "     [DYNAMIC PLUGIN] VEHICLE RETURNED     \n";
         target << " VEHICLE:  " << vehicle_name << "\n";
         target << " DURATION: " << std::fixed << std::setprecision(1) << rental_duration_hours
                << " Hours\n";

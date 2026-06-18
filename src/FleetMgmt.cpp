@@ -1,13 +1,13 @@
 #include "FleetMgmt.h"
 #include "Exceptions.h"
 #include "Logger.h"
-#include <mutex>
-#include <shared_mutex>
-#include <regex>
 #include "Types.h"
 #include <algorithm>
 #include <cmath>
+#include <mutex>
 #include <random>
+#include <regex>
+#include <shared_mutex>
 #include <stdexcept>
 
 namespace {
@@ -50,7 +50,7 @@ auto isValidRentalCode(const std::string& code) -> bool {
     static const std::regex regex_pattern(R"(^RENT-[A-Z0-9]{6}$)");
     return std::regex_match(code, regex_pattern);
 }
-} 
+} // namespace
 
 FleetManager::FleetManager(std::unique_ptr<IStorage> storage, std::unique_ptr<IPrinter> printer,
                            std::function<std::chrono::system_clock::time_point()> now_fn)
@@ -393,4 +393,10 @@ auto FleetManager::getRentalBilledHours(uint32_t vehicle_id) const -> std::optio
         }
     }
     return std::nullopt;
+}
+
+auto FleetManager::idExists(uint32_t vehicle_id) const -> bool {
+    std::shared_lock lock(mutex_);
+    return std::any_of(fleet_.begin(), fleet_.end(),
+                       [vehicle_id](const Vehicle& veh) { return veh.getId() == vehicle_id; });
 }

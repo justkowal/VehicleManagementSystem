@@ -1,0 +1,30 @@
+name: Nix Cache
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/nix-cache.yml'
+
+jobs:
+  nix-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: justkowal
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Build devShell profile and push to Cachix
+        run: |
+          nix develop --impure --profile devshell-profile --command true

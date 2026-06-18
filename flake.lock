@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "escpresso": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781822057,
+        "narHash": "sha256-V5oihnuzTRtqYsrS+xIilEogWfkAsLebtlEeAo1V0JI=",
+        "owner": "justkowal",
+        "repo": "escpresso",
+        "rev": "a784fcafddae21ca4ef20c0f2dc93eab3315846b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "justkowal",
+        "repo": "escpresso",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -88,6 +104,7 @@
     },
     "root": {
       "inputs": {
+        "escpresso": "escpresso",
         "flake-utils": "flake-utils",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_2"

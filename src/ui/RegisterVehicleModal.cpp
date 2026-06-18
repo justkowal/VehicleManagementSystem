@@ -1,18 +1,19 @@
 #include "ui/RegisterVehicleModal.h"
+#include "notui/Button.h"
 #include "notui/Dropdown.h"
+#include "notui/HBox.h"
 #include "notui/InputBox.h"
 #include "notui/Label.h"
-#include "notui/HBox.h"
 #include "notui/Spacer.h"
-#include "notui/Button.h"
 #include <algorithm>
 #include <cctype>
-#include <cstdlib>
 #include <cmath>
+#include <cstdlib>
 
 using namespace notui;
 
 RegisterVehicleModal::RegisterVehicleModal(
+    const std::function<bool(uint32_t)>& id_exists_fn,
     const std::function<void(std::optional<Vehicle>)>& callback)
     : Modal("Register Vehicle", 50, 15) {
     auto type_select = std::make_shared<Dropdown>(std::vector<std::string>{"Car", "Bike", "Truck"});
@@ -75,7 +76,14 @@ RegisterVehicleModal::RegisterVehicleModal(
     btn_row->fixed_height = 1;
     btn_row->main_axis_alignment = MainAxisAlignment::Center;
 
-    auto save_btn = std::make_shared<Button>("Save", [=]() {
+    auto save_btn = std::make_shared<Button>("Save", [brand_in, model_in, rate_in, spec_in,
+                                                      type_select, id_exists_fn, callback]() {
+        uint32_t random_id = 0;
+
+        while (id_exists_fn(random_id =
+                                200 + static_cast<uint32_t>(std::rand() % 9700))) {
+        }
+
         std::string brand = brand_in->get_value();
         std::string model = model_in->get_value();
         double rate_val = rate_in->get_value();
@@ -86,22 +94,26 @@ RegisterVehicleModal::RegisterVehicleModal(
         }
 
         int rate = static_cast<int>(std::round(rate_val * 100.0));
-        uint32_t random_id = 200 + static_cast<uint32_t>(std::rand() % 9700);
-        Vehicle new_veh(Car{});
+        std::optional<Vehicle> new_veh;
+
         int idx = type_select->get_selected_index();
+
         if (idx == 0) {
-            new_veh =
-                Vehicle(Car{random_id, brand, model, static_cast<uint8_t>(spec > 0 ? spec : 5),
-                            rate, VehicleStatus::Available});
+            new_veh.emplace(Car{random_id, brand, model, static_cast<uint8_t>(spec > 0 ? spec : 5),
+                                rate, VehicleStatus::Available});
         } else if (idx == 1) {
-            new_veh = Vehicle(Bike{random_id, brand, model, rate, VehicleStatus::Available});
+            new_veh.emplace(Bike{random_id, brand, model, rate, VehicleStatus::Available});
         } else {
-            new_veh = Vehicle(Truck{random_id, brand, model,
-                                    static_cast<uint32_t>(spec > 0 ? spec : 2000), rate,
-                                    VehicleStatus::Available});
+            new_veh.emplace(Truck{random_id, brand, model,
+                                  static_cast<uint32_t>(spec > 0 ? spec : 2000), rate,
+                                  VehicleStatus::Available});
         }
-        callback(new_veh);
+
+        if (new_veh.has_value()) {
+            callback(new_veh);
+        }
     });
+
     save_btn->style.bg({40, 120, 60}).fg({255, 255, 255});
     btn_row->add_child(save_btn);
 
