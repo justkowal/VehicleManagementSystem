@@ -32,15 +32,15 @@ const int CPL = 48;
 const std::string SEPARATOR = std::string(CPL, '-') + "\n";
 
 const std::string RECEIPT_HEADER = ESC_INIT + ESC_CENTER + ESC_BOLD_ON +
-                                   "FAKE VEHICLE RENTAL SP. Z O.O.\n" + ESC_BOLD_OFF +
-                                   "ul. Kosza 5\n"
-                                   "37-054 Poznan, Polska\n"
-                                   "NIP: 677-123-45-67\n" +
+                                   "FAKE VEHICLE RENTAL LTD.\n" + ESC_BOLD_OFF +
+                                   "5 Oak Street\n"
+                                   "Springfield, ST 12345\n"
+                                   "VAT: 677-123-45-67\n" +
                                    ESC_LEFT + SEPARATOR;
 
 const std::string RECEIPT_FOOTER = "\n" + ESC_CENTER +
-                                   "Dziekujemy za wybranie naszych uslug!\n"
-                                   "Zapraszamy ponownie.\n" +
+                                   "Thank you for choosing our services!\n"
+                                   "We look forward to seeing you again.\n" +
                                    ESC_FEED_5 + ESC_FULL_CUT;
 
 auto justifyLine(const std::string& left, const std::string& right) -> std::string {
@@ -159,13 +159,13 @@ auto EscPosPrinter::printCheckout(const std::string& vehicle_name,
 
     payload += ESC_CENTER;
     payload += ESC_BOLD_ON;
-    payload += "POTWIERDZENIE WYPOZYCZENIA\n\n";
+    payload += "RENTAL CONFIRMATION\n\n";
     payload += ESC_BOLD_OFF;
 
     payload += ESC_LEFT;
-    payload += "Pojazd: " + vehicle_name + "\n";
+    payload += "Vehicle: " + vehicle_name + "\n";
     if (!name.empty() || !surname.empty()) {
-        payload += "Najemca: " + name + " " + surname + "\n";
+        payload += "Renter: " + name + " " + surname + "\n";
     }
     if (!id_card.empty()) {
         payload += "ID: " + id_card + "\n";
@@ -176,12 +176,12 @@ auto EscPosPrinter::printCheckout(const std::string& vehicle_name,
         localtime_r(&raw_time, &tm_struct);
         std::array<char, 20> buffer{};
         std::strftime(buffer.data(), buffer.size(), "%Y-%m-%d %H:%M:%S", &tm_struct);
-        payload += "Data: " + std::string(buffer.data()) + "\n";
+        payload += "Date: " + std::string(buffer.data()) + "\n";
     }
     payload += "\n";
 
     payload += ESC_CENTER;
-    payload += "KOD SZYBKIEGO ZWROTU:\n";
+    payload += "QUICK RETURN CODE:\n";
     payload += ESC_DOUBLE_HW;
     payload += code + "\n";
     payload += ESC_NORMAL_TEXT;
@@ -203,11 +203,11 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, int price_per_h
 
     payload += ESC_CENTER;
     payload += ESC_BOLD_ON;
-    payload += "PARAGON FISKALNY\n\n";
+    payload += "RENTAL RECEIPT\n\n";
     payload += ESC_BOLD_OFF;
 
     payload += ESC_LEFT;
-    payload += "Wynajem: " + vehicle_name + "\n";
+    payload += "Rental: " + vehicle_name + "\n";
 
     std::ostringstream amount_stream;
     amount_stream << std::fixed << std::setprecision(2) << rental_duration_hours << " h x "
@@ -216,16 +216,16 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, int price_per_h
     payload += justifyLine(amount_stream.str(), formatMoney(total_price, "A"));
     payload += SEPARATOR;
 
-    payload += justifyLine("SP. OPODATKOWANA A:", formatMoney(net_price));
-    payload += justifyLine("PODATEK PTU 23% A:", formatMoney(vat_amount));
-    payload += justifyLine("SUMA PTU:", formatMoney(vat_amount));
+    payload += justifyLine("NET AMOUNT A:", formatMoney(net_price));
+    payload += justifyLine("VAT 23% A:", formatMoney(vat_amount));
+    payload += justifyLine("TOTAL VAT:", formatMoney(vat_amount));
     payload += SEPARATOR;
 
     payload += ESC_CENTER;
     payload += ESC_BOLD_ON;
     payload += ESC_DOUBLE_HW;
 
-    payload += "DO ZAPLATY: " + formatMoney(total_price, "PLN") + "\n";
+    payload += "AMOUNT DUE: " + formatMoney(total_price, "PLN") + "\n";
 
     payload += ESC_NORMAL_TEXT;
     payload += ESC_BOLD_OFF;

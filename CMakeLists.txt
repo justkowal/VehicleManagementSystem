@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(
-    VehicleRentalSystem
+    VehicleManagementSystem
     VERSION 1.2.0
     DESCRIPTION "Vehicle rental management system"
     LANGUAGES CXX
@@ -167,7 +167,7 @@ if(NOT TARGET uninstall)
 endif()
 
 
-set(CPACK_PACKAGE_NAME "VehicleRentalSystem")
+set(CPACK_PACKAGE_NAME "VehicleManagementSystem")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
 set(CPACK_PACKAGE_VENDOR "justkowal")

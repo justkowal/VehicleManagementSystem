@@ -125,9 +125,9 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
     file.close();
     std::remove(test_file.c_str());
 
-    REQUIRE(content.find("Najemca: Jan Kowalski\n") != std::string::npos);
+    REQUIRE(content.find("Renter: Jan Kowalski\n") != std::string::npos);
     REQUIRE(content.find("ID: XYZ123456\n") != std::string::npos);
-    REQUIRE(content.find("Data: 2026-06-11 22:30:15\n") != std::string::npos);
+    REQUIRE(content.find("Date: 2026-06-11 22:30:15\n") != std::string::npos);
 
     std::string expected_disable_hri = std::string() + char(0x1D) + char(0x48) + char(0x00);
     REQUIRE(content.find(expected_disable_hri) != std::string::npos);
@@ -209,7 +209,7 @@ TEST_CASE("EscPosPrinter network transmission and socket mode", "[printer][netwo
 
     REQUIRE(return_received.empty() == false);
     REQUIRE(return_received.find("Ducati Monster") != std::string::npos);
-    REQUIRE(return_received.find("DO ZAPLATY") != std::string::npos);
+    REQUIRE(return_received.find("AMOUNT DUE") != std::string::npos);
 
     SECTION("Connecting to offline printer throws PrinterException") {
         EscPosPrinter printer("127.0.0.1:59999");

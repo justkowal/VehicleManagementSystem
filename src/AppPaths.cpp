@@ -57,19 +57,19 @@ auto AppPaths::platformDefaultDataDir() -> fs::path {
     // NOLINTNEXTLINE(concurrency-mt-unsafe) — called once at startup before any threads
     const char* xdg = std::getenv("XDG_DATA_HOME");
     if (xdg != nullptr && xdg[0] != '\0') {
-        return fs::path(xdg) / "VehicleRentalSystem";
+        return fs::path(xdg) / "VehicleManagementSystem";
     }
 
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     const char* home = std::getenv("HOME");
     if (home != nullptr) {
-        return fs::path(home) / ".local" / "share" / "VehicleRentalSystem";
+        return fs::path(home) / ".local" / "share" / "VehicleManagementSystem";
     }
 
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     const passwd* passwd_ptr = getpwuid(getuid());
     if (passwd_ptr != nullptr) {
-        return fs::path(passwd_ptr->pw_dir) / ".local" / "share" / "VehicleRentalSystem";
+        return fs::path(passwd_ptr->pw_dir) / ".local" / "share" / "VehicleManagementSystem";
     }
 
     return fs::current_path() / "data";
@@ -127,8 +127,8 @@ auto AppPaths::printHelp(const char* prog_name, std::ostream& out_stream) -> voi
         << "  --help, -h                Show this message\n"
         << "\nData directory (default):\n"
 #if defined(NDEBUG)
-        << "  Release build:  $XDG_DATA_HOME/VehicleRentalSystem\n"
-        << "                  (~/.local/share/VehicleRentalSystem if XDG_DATA_HOME unset)\n"
+        << "  Release build:  $XDG_DATA_HOME/VehicleManagementSystem\n"
+        << "                  (~/.local/share/VehicleManagementSystem if XDG_DATA_HOME unset)\n"
 #else
         << "  Debug build:    ./data\n"
 #endif
