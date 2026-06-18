@@ -120,6 +120,7 @@ The architecture avoids a huge monolithic binary by using a decoupled Abstract F
 The project is wrapped in a solid DevOps ecosystem to ensure reliable builds and deployments.
 
 - Modern Build Orchestration - Uses native CMake Workflow Presets (Version 6) to provide a unified, reproducible build pipeline.
+- Reproducible Dev Environments - Configured with a locked Nix Flake (`flake.nix`) and VS Code Devcontainer integration. This guarantees compilers, system libraries (like `notcurses`), and toolchains are pinned exactly the same for anyone, anywhere, without cluttering your global OS packages.
 - Continuous Integration - Backed by GitHub Actions workflows that handle continuous integration, rigorous thread stress-testing, and automated Release packaging when you tag commits.
 - Automated Distribution - Uses CPack configuration, enabling effortless compilation and packaging into standalone installers (like DEB or RPM) for end users. There is no manual steps needed.
 
