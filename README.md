@@ -41,20 +41,20 @@ This separation strictly isolates the core business logic from the mess of termi
 ## System Architecture
 
 ```mermaid
-graph TD
+graph LR
     classDef default fill:#1e1e24,stroke:#333,stroke-width:1px,color:#fff;
     classDef primary fill:#2a4494,stroke:#4a6cd4,stroke-width:2px,color:#fff;
     classDef interface fill:#b56a1b,stroke:#e69c24,stroke-width:1.5px,color:#fff;
     classDef plugin fill:#4a2c5c,stroke:#8f3bb8,stroke-width:1.5px,color:#fff;
     classDef ext fill:#1b4d3e,stroke:#2d8a68,stroke-width:1px,color:#fff;
 
-    subgraph UserInterface ["Presentation Layer (TUI Thread)"]
+    subgraph UserInterface ["Presentation Layer (UI/Render Thread)"]
         UI[UI Module / Main Loop]:::primary
         notui[notui Layout Engine]:::primary
         notcurses[notcurses Lib]:::ext
     end
 
-    subgraph CoreEngine ["Core Business Logic"]
+    subgraph CoreEngine ["Core Business Logic (Worker/Logic Thread)"]
         FM[FleetManager]:::default
         VEH[Vehicle Variant Models]:::default
     end
@@ -80,7 +80,7 @@ graph TD
     UI -->|Manages layout via| notui
     notui -->|Draws on| notcurses
     
-    UI <-->|"Interacts with (State & Events)"| FM
+    UI <-->|"Interacts Across Threads (State & Events)"| FM
     FM -->|Manages| VEH
     
     FM -->|State Persistence via| IS
@@ -89,11 +89,11 @@ graph TD
     IS -.->|Resolved by| SR
     IP -.->|Resolved by| PR
     
-    FS -->|Implements| IS
-    EP -->|Implements| IP
+    IS <---|Implements| FS
+    IP <---|Implements| EP
     
-    DSP -.->|Registers dynamically to| SR
-    DPP -.->|Registers dynamically to| PR
+    SR <-.-|Registers dynamically to| DSP
+    PR <-.-|Registers dynamically to| DPP
 
     class UI,notui primary;
     class IS,IP interface;
