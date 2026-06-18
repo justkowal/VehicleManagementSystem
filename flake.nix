@@ -1,103 +1,110 @@
 {
-  description = "Vehicle Management Engine Environment";
+  description = "Vehicle Management TUI Engine";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
     nixgl.url = "github:nix-community/nixGL";
   };
 
-  outputs = { self, nixpkgs, nixgl }:
-    let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-      nixgl-pkgs = nixgl.packages.${system};
+  outputs = { self, nixpkgs, flake-utils, nixgl }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        lib = pkgs.lib;
 
-      wrappedKitty = pkgs.writeShellScriptBin "kitty" ''
-        exec ${nixgl-pkgs.default}/bin/nixGL ${pkgs.kitty}/bin/kitty \
-          -o font_family="JetBrainsMono Nerd Font" \
-          -o font_size=11.0 \
-          ./build/bin/RentalSystem --massive-init "$@"
-      '';
+        # Check if an Nvidia version is specified via environment variable
+        nvidiaVersionEnv = builtins.getEnv "NVIDIA_VERSION";
+        nvidiaVersion = if nvidiaVersionEnv != "" then nvidiaVersionEnv else null;
 
-      wrappedXterm = pkgs.writeShellScriptBin "xterm" ''
-        exec ${pkgs.xterm}/bin/xterm \
-          -fa "JetBrainsMono Nerd Font" \
-          -fs 11 \
-          -bg black \
-          -fg white \
-          -title "VMS Presentation" \
-          -e ./build/bin/RentalSystem --massive-init "$@"
-      '';
-    in {
-      devShells.${system}.default = pkgs.mkShell {
-        nativeBuildInputs = with pkgs; [
-          gcc13
-          cmake
-          pkg-config
-          clang-tools
-          tokei
-          socat
-          rpm
-          gh
-          fontconfig
-          git
-          zsh
-          lsd
-          fastfetch
-          wrappedKitty
-          wrappedXterm
-        ];
+        nixglPkgs = nixgl.inputs.nixpkgs.legacyPackages.${system};
 
-        buildInputs = with pkgs; [
-          notcurses
-          nerd-fonts.jetbrains-mono
-        ];
+        nixGLNvidiaPkg = if nvidiaVersion != null then
+          (import "${nixgl}/default.nix" {
+            pkgs = nixglPkgs;
+            enable32bits = nixglPkgs.stdenv.hostPlatform.isx86;
+            enableIntelX86Extensions = nixglPkgs.stdenv.hostPlatform.isx86;
+            inherit nvidiaVersion;
+          }).nixGLNvidia
+        else
+          null;
 
-        shellHook = ''
-          export XDG_DATA_DIRS="${pkgs.nerd-fonts.jetbrains-mono}/share:$XDG_DATA_DIRS"
-          ${pkgs.fontconfig}/bin/fc-cache -f > /dev/null 2>&1
+        nixGLNvidiaLink = if nixGLNvidiaPkg != null then
+          pkgs.runCommand "nixGLNvidia-link" {} ''
+            mkdir -p $out/bin
+            ln -s ${nixGLNvidiaPkg}/bin/nixGLNvidia-${nvidiaVersion} $out/bin/nixGLNvidia
+            ln -s ${nixGLNvidiaPkg}/bin/nixGLNvidia-${nvidiaVersion} $out/bin/nixGL
+          ''
+        else
+          null;
 
-          if [ ! -d "$HOME/.oh-my-zsh" ]; then
-            ${pkgs.git}/bin/git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" > /dev/null 2>&1
+        # Helper to wrap GPU-accelerated applications
+        wrapGPU = name: exe: pkgs.writeShellScriptBin name ''
+          if [ -e /proc/driver/nvidia ] || command -v nvidia-smi >/dev/null 2>&1; then
+            if command -v nixGLNvidia >/dev/null 2>&1; then
+              exec nixGLNvidia ${exe} "$@"
+            elif command -v nixGL >/dev/null 2>&1; then
+              exec nixGL ${exe} "$@"
+            fi
+          else
+            if command -v nixGLIntel >/dev/null 2>&1; then
+              exec nixGLIntel ${exe} "$@"
+            elif command -v nixGL >/dev/null 2>&1; then
+              exec nixGL ${exe} "$@"
+            fi
           fi
-
-          ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
-          if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
-            ${pkgs.git}/bin/git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions" > /dev/null 2>&1
-          fi
-          if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
-            ${pkgs.git}/bin/git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" > /dev/null 2>&1
-          fi
-
-          if [ ! -f "$HOME/.zshrc" ]; then
-            cat << 'EOF' > "$HOME/.zshrc"
-export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="agnosterzak"
-
-plugins=(
-    git
-    zsh-autosuggestions
-    zsh-syntax-highlighting
-)
-
-source $ZSH/oh-my-zsh.sh
-
-fastfetch
-
-alias ls='lsd'
-alias l='ls -l'
-alias la='ls -a'
-alias lla='ls -la'
-alias lt='ls --tree'
-
-export PATH=$PATH
-EOF
-          fi
-
-          if [ -z "$ZSH_VERSION" ]; then
-            exec zsh
-          fi
+          exec ${exe} "$@"
         '';
-      };
-    };
+
+        wrappedKitty = wrapGPU "kitty" "${pkgs.kitty}/bin/kitty";
+        wrappedGlxinfo = wrapGPU "glxinfo" "${pkgs.mesa-demos}/bin/glxinfo";
+        wrappedGlxgears = wrapGPU "glxgears" "${pkgs.mesa-demos}/bin/glxgears";
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            # TUI & Core Build Tools
+            notcurses
+            ncurses
+            pkg-config
+            cmake
+            clang-tools
+            nil
+
+            # Diagnostic & Terminal Tools
+            wrappedKitty
+            wrappedGlxinfo
+            wrappedGlxgears
+            xterm
+
+            # The Hardware Acceleration Bridge
+            nixgl.packages.${system}.nixGLIntel
+            nixgl.packages.${system}.nixGLDefault
+          ] ++ lib.optionals (nixGLNvidiaPkg != null) [
+            nixGLNvidiaPkg
+            nixGLNvidiaLink
+          ];
+
+          shellHook = ''
+            export IN_NIX_SHELL="1"
+            echo "🏎️ Vehicle Management TUI Engine Environment Active"
+
+            # Print active GPU acceleration bridge status
+            if [ -e /proc/driver/nvidia ] || command -v nvidia-smi >/dev/null 2>&1; then
+              if command -v nixGLNvidia >/dev/null 2>&1; then
+                echo "GPU Acceleration Bridge: Configured for NVIDIA (using nixGLNvidia)"
+              else
+                echo "GPU Acceleration Bridge: Configured for NVIDIA (using nixGL)"
+              fi
+            else
+              if command -v nixGLIntel >/dev/null 2>&1; then
+                echo "GPU Acceleration Bridge: Configured for Intel/AMD/Mesa (using nixGLIntel)"
+              else
+                echo "GPU Acceleration Bridge: Configured for Intel/AMD/Mesa (using nixGL)"
+              fi
+            fi
+          '';
+        };
+      }
+    );
 }

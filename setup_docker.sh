@@ -94,6 +94,8 @@ if command -v nvidia-smi &> /dev/null || (command -v lspci &> /dev/null && lspci
     HAS_NVIDIA=true
 fi
 
+mkdir -p .devcontainer
+
 if [ "$HAS_NVIDIA" = true ]; then
     if ! command -v nvidia-container-toolkit &> /dev/null; then
         echo "[✗] NVIDIA hardware detected but toolkit is missing."
@@ -113,20 +115,123 @@ if [ "$HAS_NVIDIA" = true ]; then
     else
         echo "[✓] NVIDIA Container Toolkit verified."
     fi
-elif [ -d /dev/dri ]; then
-    if [ ! -r /dev/dri/renderD128 ] || [ ! -w /dev/dri/renderD128 ]; then
-        echo "[✗] Direct Rendering Infrastructure access denied."
-        if prompt_yn "    Action: Open access to /dev/dri devices (chmod 666)?"; then
-            sudo chmod 666 /dev/dri/*
-            echo "[✓] Render device permissions opened."
+
+    echo -n "[ ] Writing NVIDIA-optimized devcontainer.json... "
+    cat << 'EOF' > .devcontainer/devcontainer.json
+{
+    "name": "Vehicle Management TUI Engine",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/nix:1": {
+            "extraNixConfig": "experimental-features = nix-command flakes"
+        }
+    },
+    "runArgs": [
+        "--net=host",
+        "--gpus=all",
+        "-e", "DISPLAY=${localEnv:DISPLAY}"
+    ],
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+    ],
+    "ipc": "host",
+    "postCreateCommand": "sudo mkdir -p /etc/nix && echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf > /dev/null && sudo dbus-uuidgen --ensure=/etc/machine-id && direnv allow",
+    "userEnvProbe": "loginShell",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.formatOnSave": true,
+                "C_Cpp.clang_format_style": "file",
+                "C_Cpp.clang_format_fallbackStyle": "Google",
+                "workbench.colorTheme": "Catppuccin Mocha",
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "nix.enableLanguageServer": true,
+                "nix.serverPath": "nil"
+            },
+            "extensions": [
+                "Catppuccin.catppuccin-vsc",
+                "xaver.clang-format",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-vscode.cpptools-extension-pack",
+                "eamodio.gitlens",
+                "zaaack.markdown-editor",
+                "jnoortheen.nix-ide",
+                "mkhl.direnv"
+            ]
+        }
+    }
+}
+EOF
+    echo "DONE"
+
+else
+    if [ -d /dev/dri ]; then
+        if [ ! -r /dev/dri/renderD128 ] || [ ! -w /dev/dri/renderD128 ]; then
+            echo "[✗] Direct Rendering Infrastructure access denied."
+            if prompt_yn "    Action: Open access to /dev/dri devices (chmod 666)?"; then
+                sudo chmod 666 /dev/dri/*
+                echo "[✓] Render device permissions opened."
+            else
+                echo "[ ] Skipping hardware device adjustment."
+            fi
         else
-            echo "[ ] Skipping hardware device adjustment."
+            echo "[✓] Direct Rendering Infrastructure verified."
         fi
     else
-        echo "[✓] Direct Rendering Infrastructure verified."
+        echo "[✓] GPU Infrastructure: Core software rendering fallback active."
     fi
-else
-    echo "[✓] GPU Infrastructure: Core software rendering fallback active."
+
+    echo -n "[ ] Writing Render-optimized devcontainer.json... "
+    cat << 'EOF' > .devcontainer/devcontainer.json
+{
+    "name": "Vehicle Management TUI Engine",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/nix:1": {
+            "extraNixConfig": "experimental-features = nix-command flakes"
+        }
+    },
+    "runArgs": [
+        "--net=host",
+        "--device=/dev/dri",
+        "-e", "DISPLAY=${localEnv:DISPLAY}"
+    ],
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+    ],
+    "ipc": "host",
+    "postCreateCommand": "sudo mkdir -p /etc/nix && echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf > /dev/null && sudo dbus-uuidgen --ensure=/etc/machine-id && direnv allow",
+    "userEnvProbe": "loginShell",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.formatOnSave": true,
+                "C_Cpp.clang_format_style": "file",
+                "C_Cpp.clang_format_fallbackStyle": "Google",
+                "workbench.colorTheme": "Catppuccin Mocha",
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "nix.enableLanguageServer": true,
+                "nix.serverPath": "nil"
+            },
+            "extensions": [
+                "Catppuccin.catppuccin-vsc",
+                "xaver.clang-format",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-vscode.cpptools-extension-pack",
+                "eamodio.gitlens",
+                "zaaack.markdown-editor",
+                "jnoortheen.nix-ide",
+                "mkhl.direnv"
+            ]
+        }
+    }
+}
+EOF
+    echo "DONE"
 fi
 
 if docker ps &> /dev/null; then
@@ -150,18 +255,16 @@ if prompt_yn "Would you like to run a universal glxgears container to verify har
             xhost +local:root > /dev/null 2>&1
         fi
 
-        GPU_RUN_ARGS=""
+        GPU_TEST_ARGS=""
         if [ "$HAS_NVIDIA" = true ]; then
-            GPU_RUN_ARGS="--gpus all"
+            GPU_TEST_ARGS="--gpus all"
         elif [ -d /dev/dri ]; then
-            GPU_RUN_ARGS="--device /dev/dri"
+            GPU_TEST_ARGS="--device /dev/dri"
         fi
 
-        echo "    Executing 10-second unlocked framerate test..."
-        
         set +e
         OUTPUT=$(docker run --rm \
-            $GPU_RUN_ARGS \
+            $GPU_TEST_ARGS \
             -e DISPLAY="$DISPLAY" \
             -e vblank_mode=0 \
             -e __GL_SYNC_TO_VBLANK=0 \
@@ -178,7 +281,7 @@ if prompt_yn "Would you like to run a universal glxgears container to verify har
                 echo "    Retrying test execution..."
                 set +e
                 OUTPUT=$(docker run --rm \
-                    $GPU_RUN_ARGS \
+                    $GPU_TEST_ARGS \
                     -e DISPLAY="$DISPLAY" \
                     -e vblank_mode=0 \
                     -e __GL_SYNC_TO_VBLANK=0 \
@@ -190,7 +293,6 @@ if prompt_yn "Would you like to run a universal glxgears container to verify har
         fi
 
         echo "$OUTPUT" | grep -E "frames|FPS" || true
-        
         MAX_FPS=$(echo "$OUTPUT" | grep -oE '[0-9.]+\s+FPS' | awk '{print $1}' | sort -nr | head -n1 | cut -d. -f1)
 
         if [ -n "$MAX_FPS" ] && [ "$MAX_FPS" -gt 300 ]; then
