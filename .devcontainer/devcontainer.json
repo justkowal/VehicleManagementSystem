@@ -1,10 +1,19 @@
 {
     "name": "Vehicle Management TUI Engine",
-    "image": "mcr.microsoft.com/devcontainers/cpp:1-debian-12",
-    "features": {
-        "ghcr.io/devcontainers/features/github-cli:1": {}
-    },
-    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake pkg-config libnotcurses-dev libnotcurses-core-dev clang-tidy socat rpm",
+    "image": "nixos/nix:latest",
+    "runArgs": [
+        "--net=host",
+        "--gpus=all",
+        "--device=/dev/dri",
+        "-e",
+        "DISPLAY=${localEnv:DISPLAY}"
+    ],
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+    ],
+    "updateContentCommand": "nix profile install nixpkgs#nil && nix develop --profile .direnv/flake-profile",
+    "userEnvProbe": "loginShell",
+    "overrideCommand": false,
     "customizations": {
         "vscode": {
             "settings": {
@@ -12,7 +21,9 @@
                 "C_Cpp.clang_format_style": "file",
                 "C_Cpp.clang_format_fallbackStyle": "Google",
                 "workbench.colorTheme": "Catppuccin Mocha",
-                "C_Cpp.intelliSenseEngine": "disabled"
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "nix.enableLanguageServer": true,
+                "nix.serverPath": "nil"
             },
             "extensions": [
                 "Catppuccin.catppuccin-vsc",
@@ -20,7 +31,8 @@
                 "llvm-vs-code-extensions.vscode-clangd",
                 "ms-vscode.cpptools-extension-pack",
                 "eamodio.gitlens",
-                "zaaack.markdown-editor"
+                "zaaack.markdown-editor",
+                "jnoortheen.nix-ide"
             ]
         }
     }
