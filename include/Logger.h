@@ -23,7 +23,6 @@ public:
     Logger(Logger&&) = delete;
     auto operator=(Logger&&) -> Logger& = delete;
 
-    // Configure the log file. Once set, logs write to this file and console output is disabled.
     auto setLogFile(const std::string& path) -> void;
     auto setMinLogLevel(LogLevel level) -> void;
     auto suppressConsole(bool suppress) -> void;

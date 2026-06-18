@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="https://tokei.rs/b1/github/justkowal/VehicleManagementSystem?category=code" alt="Total Code Volume Lines"/>
+  <img src="https://img.shields.io/badge/Lines%20of%20Code-9322-blueviolet?style=flat-square" alt="Total Code Volume Lines"/>
   <img src="https://img.shields.io/github/repo-size/justkowal/VehicleManagementSystem?style=flat-square&color=orange" alt="Disk Footprint on GitHub"/>
   <img src="https://img.shields.io/github/last-commit/justkowal/VehicleManagementSystem?style=flat-square&color=brightgreen" alt="Active Maintenance Telemetry"/>
   <img src="https://img.shields.io/badge/AGH%20University-PL--II%20Project-7D2232?style=flat-square" alt="AGH University Programming Languages II Laboratory Track"/>
@@ -37,6 +37,50 @@
 The Vehicle Management System is a C++ app built with a big focus on decoupling, thread safety and modularity. Instead of using standard terminal interfaces that mix domain logic with console output, this project brings in `notui` - a custom abstract layout rendering framework built on top of the `notcurses` library.
 
 This separation strictly isolates the core business logic from the mess of terminal I/O. By treating the UI as its own separate rendering target, the app is much easier to test and maintain, and its open to future extensions without breaking the underlying state management.
+
+## System Architecture
+
+```mermaid
+graph TD
+    classDef default fill:#1e1e24,stroke:#333,stroke-width:1px,color:#fff;
+    classDef primary fill:#2a4494,stroke:#4a6cd4,stroke-width:2px,color:#fff;
+    classDef secondary fill:#2d3748,stroke:#4a5568,stroke-width:1px,color:#cbd5e0;
+    classDef plugin fill:#4a2c5c,stroke:#8f3bb8,stroke-width:1.5px,color:#fff;
+    classDef ext fill:#1b4d3e,stroke:#2d8a68,stroke-width:1px,color:#fff;
+
+    subgraph UserInterface ["Presentation Layer (TUI)"]
+        UI[UI Module]:::primary
+        notui[notui Layout Engine]:::primary
+        notcurses[notcurses Lib]:::ext
+    end
+
+    subgraph CoreEngine ["Core Business Logic (rental_engine)"]
+        FM[FleetManager]:::default
+        VEH[Vehicle Variant Models]:::default
+        FS[FileStorage]:::default
+        SR[StorageRegistry]:::default
+        PR[PrinterRegistry]:::default
+    end
+
+    subgraph Extensibility ["Plugin Extension Layer"]
+        CPPlugin[custom_printer_plugin.so]:::plugin
+    end
+
+    UI -->|Manages layout via| notui
+    notui -->|Draws on| notcurses
+    
+    UI -->|Interacts with| FM
+    FM -->|Manages state of| VEH
+    FM -->|Reads/Writes via| FS
+    FM -->|Resolves backends| SR
+    FM -->|Prints via| PR
+    
+    CPPlugin -.->|Registered into at runtime| PR
+
+    class UI,notui primary;
+    class CPPlugin plugin;
+    class notcurses ext;
+```
 
 ## Key Architectural Highlights
 

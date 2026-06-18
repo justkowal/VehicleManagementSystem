@@ -32,3 +32,6 @@ test_notcurses.cpp
 # Nix and direnv local caches
 .direnv/
 .envrc.local
+
+VehicleManagementSystem-*.zip
+

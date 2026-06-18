@@ -1,4 +1,3 @@
-# rental_engine core library
 add_library(rental_engine OBJECT
     Vehicle.cpp
     FleetMgmt.cpp
@@ -8,12 +7,10 @@ add_library(rental_engine OBJECT
     Logger.cpp
 )
 
-# consumers of rental_engine inherit this include path
 target_include_directories(rental_engine PUBLIC
     "${CMAKE_SOURCE_DIR}/include"
 )
 
-# compiler warnings
 target_compile_options(rental_engine PRIVATE
     $<$<CONFIG:Debug>:
         -Wall
@@ -35,10 +32,16 @@ target_compile_options(rental_engine PRIVATE
 
 enable_clang_tidy(rental_engine)
 
-# RentalSystem main application
 add_executable(RentalSystem
     main.cpp
     UI.cpp
+    ui/AdvancedFilterModal.cpp
+    ui/LoadingOverlay.cpp
+    ui/LogsModal.cpp
+    ui/QuickReturnModal.cpp
+    ui/RentVehicleModal.cpp
+    ui/RegisterVehicleModal.cpp
+    ui/StatusChangeModal.cpp
 )
 
 target_include_directories(RentalSystem PRIVATE
@@ -73,10 +76,3 @@ target_compile_options(RentalSystem PRIVATE
 
 enable_clang_tidy(RentalSystem)
 
-
-# demo_notui developer demo
-add_executable(demo_notui
-    demo_notui.cpp
-)
-
-target_link_libraries(demo_notui PRIVATE notui)

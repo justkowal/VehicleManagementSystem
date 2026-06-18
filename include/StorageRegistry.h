@@ -3,10 +3,8 @@
 #include "IStorage.h"
 #include "PluginRegistry.h"
 
-// storage registry (type alias)
 using StorageRegistry = PluginRegistry<IStorage>;
 
-// registers storage at static initialization time
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp,cppcoreguidelines-macro-usage)
 #define REGISTER_STORAGE(name, Type, is_default)                                    \
     static const bool _storage_registered_##Type =                                  \

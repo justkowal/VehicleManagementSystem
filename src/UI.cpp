@@ -10,698 +10,10 @@
 
 using namespace notui;
 
-namespace {
-auto uiFormatMoney(int amount_grosz) -> std::string {
-    int zlotys = amount_grosz / 100;
-    int groszy = std::abs(amount_grosz % 100);
-    std::ostringstream oss;
-    oss << zlotys << "." << std::setw(2) << std::setfill('0') << groszy;
-    return oss.str();
-}
+#include "ui/UIHelpers.h"
 
-struct LogRenderInfo {
-    ColorRGB color;
-    std::string details;
-};
-
-auto process_log_entry(RecordType type, const std::string& raw_details) -> LogRenderInfo {
-    ColorRGB color{120, 120, 120}; // default gray
-    switch (type) {
-    case RecordType::Checkout:
-        color = {220, 160, 20}; // orange
-        break;
-    case RecordType::Returned:
-        color = {40, 180, 80}; // green
-        break;
-    case RecordType::Maintenance:
-        color = {220, 50, 50}; // red
-        break;
-    case RecordType::Note:
-        color = {80, 150, 255}; // blue
-        break;
-    }
-
-    std::string details = raw_details;
-    static const std::regex status_pattern(R"(^\[([^\]]+)\]\s*)");
-    std::smatch match;
-    if (std::regex_search(raw_details, match, status_pattern)) {
-        std::string status_label = match[1].str();
-        details = match.suffix().str();
-
-        std::string lower_label = status_label;
-        std::transform(
-            lower_label.begin(), lower_label.end(), lower_label.begin(),
-            [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
-
-        if (lower_label == "checkout" || lower_label == "rent" || lower_label == "rented") {
-            color = {220, 160, 20}; // orange
-        } else if (lower_label == "returned" || lower_label == "return" || lower_label == "retn" ||
-                   lower_label == "available" || lower_label == "avail") {
-            color = {40, 180, 80}; // green
-        } else if (lower_label == "maintenance" || lower_label == "service" ||
-                   lower_label == "mntc" || lower_label == "maint") {
-            color = {220, 50, 50}; // red
-        } else if (lower_label == "note") {
-            color = {80, 150, 255}; // blue
-        } else {
-            color = {120, 120, 120}; // unknown label -> gray
-        }
-    }
-
-    return {color, details};
-}
-} // namespace
-
-LoadingOverlay::LoadingOverlay(std::string message) {
-    fixed_height = 5;
-    fixed_width = 40;
-    is_overlay = true;
-    style.bg({35, 35, 45}).fg({255, 255, 255}).frame(true, true, " Processing ");
-
-    auto spacer = std::make_shared<Spacer>();
-    spacer->fixed_height = 1;
-    spacer->flex = 0;
-    add_child(spacer);
-
-    auto msg_lbl = std::make_shared<Label>(std::move(message), Size{1, 36}, true);
-    msg_lbl->style.fg({220, 160, 20}).attr(NCSTYLE_BOLD);
-    add_child(msg_lbl);
-
-    auto hint_lbl = std::make_shared<Label>("Working in background...", Size{1, 36}, true);
-    hint_lbl->style.fg({120, 120, 120});
-    add_child(hint_lbl);
-}
-
-auto LoadingOverlay::layout(struct ncplane* parent_plane, Point pos, Size size) -> void {
-    abs_y = pos.y;
-    abs_x = pos.x;
-    height = size.height;
-    width = size.width;
-
-    if (backdrop_plane_ != nullptr) {
-        ncplane_destroy(backdrop_plane_);
-        backdrop_plane_ = nullptr;
-    }
-
-    if (parent_plane == nullptr || size.height <= 0 || size.width <= 0) {
-        return;
-    }
-
-    struct ncplane_options b_opts = {.y = 0,
-                                     .x = 0,
-                                     .rows = static_cast<unsigned>(size.height),
-                                     .cols = static_cast<unsigned>(size.width),
-                                     .userptr = this,
-                                     .name = "loading_backdrop",
-                                     .resizecb = nullptr,
-                                     .flags = 0,
-                                     .margin_b = 0,
-                                     .margin_r = 0};
-    backdrop_plane_ = ncplane_create(parent_plane, &b_opts);
-    if (backdrop_plane_ != nullptr) {
-        ncplane_move_top(backdrop_plane_);
-        uint64_t channels = 0;
-        ncchannels_set_bg_rgb8(&channels, 10, 10, 15);
-        ncchannels_set_bg_alpha(&channels, NCALPHA_BLEND);
-        ncchannels_set_fg_alpha(&channels, NCALPHA_TRANSPARENT);
-        ncplane_set_base(backdrop_plane_, "", 0, channels);
-        ncplane_erase(backdrop_plane_);
-    }
-
-    int center_y = (size.height - fixed_height) / 2;
-    int center_x = (size.width - fixed_width) / 2;
-    VBox::layout(backdrop_plane_, Point{center_y, center_x}, Size{fixed_height, fixed_width});
-}
-
-auto LoadingOverlay::destroy_planes() -> void {
-    VBox::destroy_planes();
-    if (backdrop_plane_ != nullptr) {
-        ncplane_destroy(backdrop_plane_);
-        backdrop_plane_ = nullptr;
-    }
-}
-
-auto LoadingOverlay::raise_to_top() -> void {
-    if (backdrop_plane_ != nullptr) {
-        ncplane_move_top(backdrop_plane_);
-    }
-    VBox::raise_to_top();
-}
-
-LogsModal::LogsModal(std::string title, const std::vector<Record>& records,
-                     std::function<void()> on_close)
-    : on_close_(std::move(on_close)) {
-    fixed_height = 16;
-    fixed_width = 70;
-    is_overlay = true;
-    style.bg({30, 30, 35}).fg({255, 255, 255}).frame(true, true);
-
-    title_label_ = std::make_shared<Label>(std::move(title), Size{1, 60}, true);
-    title_label_->style.fg({80, 150, 255}).attr(NCSTYLE_BOLD);
-    add_child(title_label_);
-
-    auto spacer = std::make_shared<Spacer>();
-    spacer->fixed_height = 1;
-    spacer->flex = 0;
-    add_child(spacer);
-
-    scroll_area_ = std::make_shared<ScrollArea>();
-    scroll_area_->flex = 1;
-    scroll_area_->style.bg({20, 20, 25}).frame(true, true, " History Logs ").pad({0, 1, 0, 1});
-
-    if (records.empty()) {
-        auto lbl = std::make_shared<Label>("No transaction logs found for this vehicle.",
-                                           Size{1, 55}, true);
-        lbl->style.fg({150, 150, 150});
-        scroll_area_->add_child(lbl);
-    } else {
-        for (size_t i = 0; i < records.size(); ++i) {
-            const auto& rec = records[i];
-
-            if (i > 0) {
-                auto line_row = std::make_shared<HBox>();
-                line_row->fixed_height = 1;
-                line_row->flex = 0;
-
-                auto line_lbl = std::make_shared<Label>("│", Size{1, 1});
-                line_lbl->style.fg({80, 80, 80});
-                line_lbl->style.pad({0, 0, 0, 0});
-                line_row->add_child(line_lbl);
-
-                scroll_area_->add_child(line_row);
-            }
-
-            auto row = std::make_shared<HBox>();
-            row->fixed_height = 1;
-            row->flex = 0;
-
-            auto log_info = process_log_entry(rec.type, rec.details);
-
-            auto circle_lbl = std::make_shared<Label>("●", Size{1, 1});
-            circle_lbl->style.fg(log_info.color);
-            circle_lbl->style.pad({0, 0, 0, 0});
-            row->add_child(circle_lbl);
-
-            auto sp1 = std::make_shared<Spacer>();
-            sp1->fixed_width = 1;
-            sp1->flex = 0;
-            row->add_child(sp1);
-
-            std::time_t raw_time = std::chrono::system_clock::to_time_t(rec.timestamp);
-            std::tm tm_struct{};
-            gmtime_r(&raw_time, &tm_struct);
-            std::array<char, 20> buffer{};
-            std::strftime(buffer.data(), buffer.size(), "%m-%d %H:%M", &tm_struct);
-            std::string time_str(buffer.data());
-
-            auto time_lbl = std::make_shared<Label>("[" + time_str + "]", Size{1, 13});
-            time_lbl->style.fg({120, 120, 120});
-            time_lbl->style.pad({0, 0, 0, 0});
-            row->add_child(time_lbl);
-
-            auto sp2 = std::make_shared<Spacer>();
-            sp2->fixed_width = 1;
-            sp2->flex = 0;
-            row->add_child(sp2);
-
-            auto details_lbl = std::make_shared<Label>(log_info.details, Size{1, 0});
-            details_lbl->flex = 1;
-            details_lbl->style.fg({200, 200, 200});
-            row->add_child(details_lbl);
-
-            scroll_area_->add_child(row);
-        }
-    }
-    add_child(scroll_area_);
-
-    auto sp2 = std::make_shared<Spacer>();
-    sp2->fixed_height = 1;
-    sp2->flex = 0;
-    add_child(sp2);
-
-    close_btn_ = std::make_shared<Button>("OK", [this]() {
-        if (this->on_close_) {
-            this->on_close_();
-        }
-    });
-    close_btn_->style.bg({80, 150, 255}).fg({0, 0, 0}).attr(NCSTYLE_BOLD);
-    add_child(close_btn_);
-}
-
-auto LogsModal::layout(struct ncplane* parent_plane, Point pos, Size size) -> void {
-    abs_y = pos.y;
-    abs_x = pos.x;
-    height = size.height;
-    width = size.width;
-
-    if (backdrop_plane_ != nullptr) {
-        ncplane_destroy(backdrop_plane_);
-        backdrop_plane_ = nullptr;
-    }
-
-    if (parent_plane == nullptr || size.height <= 0 || size.width <= 0) {
-        return;
-    }
-
-    struct ncplane_options b_opts = {.y = 0,
-                                     .x = 0,
-                                     .rows = static_cast<unsigned>(size.height),
-                                     .cols = static_cast<unsigned>(size.width),
-                                     .userptr = this,
-                                     .name = "logs_backdrop",
-                                     .resizecb = nullptr,
-                                     .flags = 0,
-                                     .margin_b = 0,
-                                     .margin_r = 0};
-    backdrop_plane_ = ncplane_create(parent_plane, &b_opts);
-    if (backdrop_plane_ != nullptr) {
-        ncplane_move_top(backdrop_plane_);
-        uint64_t channels = 0;
-        ncchannels_set_bg_rgb8(&channels, 10, 10, 15);
-        ncchannels_set_bg_alpha(&channels, NCALPHA_BLEND);
-        ncchannels_set_fg_alpha(&channels, NCALPHA_TRANSPARENT);
-        ncplane_set_base(backdrop_plane_, "", 0, channels);
-        ncplane_erase(backdrop_plane_);
-    }
-
-    int center_y = (size.height - fixed_height) / 2;
-    int center_x = (size.width - fixed_width) / 2;
-    VBox::layout(backdrop_plane_, Point{center_y, center_x}, Size{fixed_height, fixed_width});
-}
-
-auto LogsModal::destroy_planes() -> void {
-    VBox::destroy_planes();
-    if (backdrop_plane_ != nullptr) {
-        ncplane_destroy(backdrop_plane_);
-        backdrop_plane_ = nullptr;
-    }
-}
-
-auto LogsModal::raise_to_top() -> void {
-    if (backdrop_plane_ != nullptr) {
-        ncplane_move_top(backdrop_plane_);
-    }
-    VBox::raise_to_top();
-}
-
-RegisterVehicleModal::RegisterVehicleModal(
-    const std::function<void(std::optional<Vehicle>)>& callback)
-    : Modal("Register Vehicle", 50, 15) {
-    auto type_select = std::make_shared<Dropdown>(std::vector<std::string>{"Car", "Bike", "Truck"});
-    auto brand_in = std::make_shared<InputBox<std::string>>("Brand...", 30);
-    auto model_in = std::make_shared<InputBox<std::string>>("Model/Type...", 30);
-    auto rate_in =
-        std::make_shared<InputBox<double>>("Rate PLN/hr...", 30, [](const std::string& str) {
-            if (str.empty()) {
-                return true;
-            }
-            try {
-                std::stod(str);
-                return true;
-            } catch (...) {
-                return false;
-            }
-        });
-    auto spec_in =
-        std::make_shared<InputBox<int>>("Seats/Capacity...", 30, [](const std::string& str) {
-            return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char character) {
-                       return std::isdigit(character) != 0;
-                   });
-        });
-
-    auto model_lbl = std::make_shared<Label>("Model Name:", Size{1, 24});
-    auto spec_lbl = std::make_shared<Label>("Seats Count:", Size{1, 38});
-
-    type_select->on("change", [=](const Event&) {
-        int idx = type_select->get_selected_index();
-        if (idx == 0) {
-            model_lbl->set_text("Model Name:");
-            spec_lbl->set_text("Seats Count:");
-            spec_in->focusable = true;
-            spec_in->set_value("");
-        } else if (idx == 1) {
-            model_lbl->set_text("Category Name:");
-            spec_in->focusable = false;
-            spec_in->set_value("N/A");
-            spec_lbl->set_text("N/A");
-        } else {
-            model_lbl->set_text("Model Name:");
-            spec_lbl->set_text("Payload Capacity (kg):");
-            spec_in->focusable = true;
-            spec_in->set_value("");
-        }
-    });
-
-    add_child(std::make_shared<Label>("Vehicle Type:", Size{1, 15}));
-    add_child(type_select);
-    add_child(std::make_shared<Label>("Brand Name:", Size{1, 15}));
-    add_child(brand_in);
-    add_child(model_lbl);
-    add_child(model_in);
-    add_child(std::make_shared<Label>("Rental Rate per Hour (PLN):", Size{1, 28}));
-    add_child(rate_in);
-    add_child(spec_lbl);
-    add_child(spec_in);
-
-    auto btn_row = std::make_shared<HBox>();
-    btn_row->fixed_height = 1;
-    btn_row->main_axis_alignment = MainAxisAlignment::Center;
-
-    auto save_btn = std::make_shared<Button>("Save", [=]() {
-        std::string brand = brand_in->get_value();
-        std::string model = model_in->get_value();
-        double rate_val = rate_in->get_value();
-        int spec = spec_in->get_value();
-
-        if (brand.empty() || model.empty() || rate_val <= 0.0) {
-            return;
-        }
-
-        int rate = static_cast<int>(std::round(rate_val * 100.0));
-        uint32_t random_id = 200 + static_cast<uint32_t>(std::rand() % 9700);
-        Vehicle new_veh(Car{});
-        int idx = type_select->get_selected_index();
-        if (idx == 0) {
-            new_veh =
-                Vehicle(Car{random_id, brand, model, static_cast<uint8_t>(spec > 0 ? spec : 5),
-                            rate, VehicleStatus::Available});
-        } else if (idx == 1) {
-            new_veh = Vehicle(Bike{random_id, brand, model, rate, VehicleStatus::Available});
-        } else {
-            new_veh = Vehicle(Truck{random_id, brand, model,
-                                    static_cast<uint32_t>(spec > 0 ? spec : 2000), rate,
-                                    VehicleStatus::Available});
-        }
-        callback(new_veh);
-    });
-    save_btn->style.bg({40, 120, 60}).fg({255, 255, 255});
-    btn_row->add_child(save_btn);
-
-    auto sp_btn = std::make_shared<Spacer>();
-    sp_btn->fixed_width = 4;
-    sp_btn->flex = 0;
-    btn_row->add_child(sp_btn);
-
-    cancel_btn = std::make_shared<Button>("Cancel", [=]() { callback(std::nullopt); });
-    cancel_btn->style.bg({120, 40, 40}).fg({255, 255, 255});
-    btn_row->add_child(cancel_btn);
-
-    add_child(btn_row);
-}
-
-QuickReturnModal::QuickReturnModal(const std::function<void(std::string, std::string)>& callback)
-    : Modal("Quick Return", 50, 11) {
-    add_child(std::make_shared<Label>("Enter active rental code:", Size{1, 30}));
-    code_in = std::make_shared<InputBox<std::string>>("RENT-XXXXXX", 24);
-    add_child(code_in);
-
-    add_child(std::make_shared<Label>("Enter return notes (optional):", Size{1, 30}));
-    notes_in = std::make_shared<InputBox<std::string>>("Notes...", 30);
-    add_child(notes_in);
-
-    auto btn_row = std::make_shared<HBox>();
-    btn_row->fixed_height = 1;
-    btn_row->main_axis_alignment = MainAxisAlignment::Center;
-
-    auto ret_btn = std::make_shared<Button>(
-        "Return", [this, callback]() { callback(code_in->get_value(), notes_in->get_value()); });
-    ret_btn->style.bg({220, 160, 20}).fg({0, 0, 0}).attr(NCSTYLE_BOLD);
-    btn_row->add_child(ret_btn);
-
-    auto spacer = std::make_shared<Spacer>();
-    spacer->fixed_width = 4;
-    spacer->flex = 0;
-    btn_row->add_child(spacer);
-
-    cancel_btn = std::make_shared<Button>("Cancel", [=]() { callback("", ""); });
-    cancel_btn->style.bg({120, 40, 40}).fg({255, 255, 255});
-    btn_row->add_child(cancel_btn);
-
-    add_child(btn_row);
-}
-
-RentVehicleModal::RentVehicleModal(
-    const Vehicle& vehicle,
-    const std::function<void(bool, std::string, std::string, std::string)>& callback)
-    : Modal("Confirm Rental", 50, 13) {
-
-    std::string details = "Renting: " + vehicle.getBrand() + " " + vehicle.getModelOrType() +
-                          "\nRate: " + uiFormatMoney(vehicle.getPricePerHour()) + " PLN/h";
-    auto details_lbl = std::make_shared<Label>(details, Size{2, 46}, true);
-    details_lbl->style.fg({200, 200, 200});
-    add_child(details_lbl);
-
-    add_child(std::make_shared<Label>("Renter Name:", Size{1, 15}));
-    name_in = std::make_shared<InputBox<std::string>>("First Name...", 30);
-    add_child(name_in);
-
-    add_child(std::make_shared<Label>("Renter Surname:", Size{1, 15}));
-    surname_in = std::make_shared<InputBox<std::string>>("Last Name...", 30);
-    add_child(surname_in);
-
-    add_child(std::make_shared<Label>("Renter ID Card Number:", Size{1, 24}));
-    id_card_in = std::make_shared<InputBox<std::string>>("ID Card...", 30);
-    add_child(id_card_in);
-
-    auto btn_row = std::make_shared<HBox>();
-    btn_row->fixed_height = 1;
-    btn_row->main_axis_alignment = MainAxisAlignment::Center;
-
-    auto confirm_btn = std::make_shared<Button>("Confirm", [this, callback]() {
-        callback(true, name_in->get_value(), surname_in->get_value(), id_card_in->get_value());
-    });
-    confirm_btn->style.bg({40, 120, 60}).fg({255, 255, 255});
-    btn_row->add_child(confirm_btn);
-
-    auto spacer = std::make_shared<Spacer>();
-    spacer->fixed_width = 4;
-    spacer->flex = 0;
-    btn_row->add_child(spacer);
-
-    cancel_btn = std::make_shared<Button>("Cancel", [=]() { callback(false, "", "", ""); });
-    cancel_btn->style.bg({120, 40, 40}).fg({255, 255, 255});
-    btn_row->add_child(cancel_btn);
-
-    add_child(btn_row);
-}
-
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-StatusChangeModal::StatusChangeModal(std::string title, const std::string& action_details,
-                                     const std::function<void(bool, std::string)>& callback)
-    : Modal(std::move(title), 50, 10) {
-
-    auto details_lbl = std::make_shared<Label>(action_details, Size{2, 46}, true);
-    details_lbl->style.fg({200, 200, 200});
-    add_child(details_lbl);
-
-    add_child(std::make_shared<Label>("Add Note (optional):", Size{1, 20}));
-    notes_in = std::make_shared<InputBox<std::string>>("Notes...", 30);
-    add_child(notes_in);
-
-    auto btn_row = std::make_shared<HBox>();
-    btn_row->fixed_height = 1;
-    btn_row->main_axis_alignment = MainAxisAlignment::Center;
-
-    auto confirm_btn = std::make_shared<Button>(
-        "Confirm", [this, callback]() { callback(true, notes_in->get_value()); });
-    confirm_btn->style.bg({40, 120, 60}).fg({255, 255, 255});
-    btn_row->add_child(confirm_btn);
-
-    auto spacer = std::make_shared<Spacer>();
-    spacer->fixed_width = 4;
-    spacer->flex = 0;
-    btn_row->add_child(spacer);
-
-    cancel_btn = std::make_shared<Button>("Cancel", [=]() { callback(false, ""); });
-    cancel_btn->style.bg({120, 40, 40}).fg({255, 255, 255});
-    btn_row->add_child(cancel_btn);
-
-    add_child(btn_row);
-}
-
-AdvancedFilterModal::AdvancedFilterModal(
-    const AdvancedFilter& current_filter,
-    const std::function<void(std::optional<AdvancedFilter>)>& callback)
-    : Modal("Advanced Filters", 58, 20) {
-
-    auto scroll = std::make_shared<ScrollArea>();
-    scroll->flex = 1;
-    scroll->style.bg({30, 30, 35});
-
-    auto int_validator = [](const std::string& str) {
-        return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char character) {
-                   return std::isdigit(character) != 0;
-               });
-    };
-
-    auto double_validator = [](const std::string& str) {
-        if (str.empty()) {
-            return true;
-        }
-        try {
-            std::stod(str);
-            return true;
-        } catch (...) {
-            return false;
-        }
-    };
-
-    auto add_filter_row =
-        [&](const std::string& field_name,
-            std::shared_ptr<InputBox<std::string>>& // NOLINT(bugprone-easily-swappable-parameters)
-                min_box,                            // NOLINT(bugprone-easily-swappable-parameters)
-            std::shared_ptr<InputBox<std::string>>& // NOLINT(bugprone-easily-swappable-parameters)
-                max_box,                            // NOLINT(bugprone-easily-swappable-parameters)
-            std::shared_ptr<InputBox<std::string>>& // NOLINT(bugprone-easily-swappable-parameters)
-                eq_box,                             // NOLINT(bugprone-easily-swappable-parameters)
-            const FilterRequirement& req,
-            const std::function<bool(const std::string&)>& validator = nullptr) {
-            auto row = std::make_shared<HBox>();
-            row->fixed_height = 1;
-            row->flex = 0;
-
-            auto lbl = std::make_shared<Label>(field_name + ":", Size{1, 14});
-            lbl->style.fg({200, 200, 200});
-            row->add_child(lbl);
-
-            min_box = std::make_shared<InputBox<std::string>>("Min", 10, validator);
-            if (req.min_val.has_value()) {
-                min_box->set_value(*req.min_val);
-            }
-            row->add_child(min_box);
-
-            auto sp_inner1 = std::make_shared<Spacer>();
-            sp_inner1->fixed_width = 1;
-            sp_inner1->flex = 0;
-            row->add_child(sp_inner1);
-
-            max_box = std::make_shared<InputBox<std::string>>("Max", 10, validator);
-            if (req.max_val.has_value()) {
-                max_box->set_value(*req.max_val);
-            }
-            row->add_child(max_box);
-
-            auto sp_inner2 = std::make_shared<Spacer>();
-            sp_inner2->fixed_width = 1;
-            sp_inner2->flex = 0;
-            row->add_child(sp_inner2);
-
-            eq_box = std::make_shared<InputBox<std::string>>("Equals", 10, validator);
-            if (req.equals_val.has_value()) {
-                eq_box->set_value(*req.equals_val);
-            }
-            row->add_child(eq_box);
-
-            scroll->add_child(row);
-
-            auto row_sp = std::make_shared<Spacer>();
-            row_sp->fixed_height = 1;
-            row_sp->flex = 0;
-            scroll->add_child(row_sp);
-        };
-
-    auto add_text_filter_row = [&](const std::string& field_name,
-                                   std::shared_ptr<InputBox<std::string>>& eq_box,
-                                   const FilterRequirement& req) {
-        auto row = std::make_shared<HBox>();
-        row->fixed_height = 1;
-        row->flex = 0;
-
-        auto lbl = std::make_shared<Label>(field_name + ":", Size{1, 14});
-        lbl->style.fg({200, 200, 200});
-        row->add_child(lbl);
-
-        eq_box = std::make_shared<InputBox<std::string>>("Equals", 32);
-        if (req.equals_val.has_value()) {
-            eq_box->set_value(*req.equals_val);
-        }
-        row->add_child(eq_box);
-
-        scroll->add_child(row);
-
-        auto row_sp = std::make_shared<Spacer>();
-        row_sp->fixed_height = 1;
-        row_sp->flex = 0;
-        scroll->add_child(row_sp);
-    };
-
-    add_filter_row("Vehicle ID", id_min, id_max, id_eq, current_filter.id, int_validator);
-    add_text_filter_row("Brand Name", brand_eq, current_filter.brand);
-    add_text_filter_row("Model/Type", model_eq, current_filter.model);
-    add_text_filter_row("Type", type_eq, current_filter.type);
-    add_text_filter_row("Status", status_eq, current_filter.status);
-    add_filter_row("PLN/hr Rate", price_min, price_max, price_eq, current_filter.price,
-                   double_validator);
-    add_filter_row("Seats (Car)", seats_min, seats_max, seats_eq, current_filter.seats,
-                   int_validator);
-    add_filter_row("Payload (kg)", payload_min, payload_max, payload_eq, current_filter.payload,
-                   int_validator);
-    add_text_filter_row("Rental Code", rental_code_eq, current_filter.rental_code);
-
-    add_child(scroll);
-
-    auto spacer_sp = std::make_shared<Spacer>();
-    spacer_sp->fixed_height = 1;
-    spacer_sp->flex = 0;
-    add_child(spacer_sp);
-
-    auto btn_row = std::make_shared<HBox>();
-    btn_row->fixed_height = 1;
-    btn_row->main_axis_alignment = MainAxisAlignment::Center;
-
-    auto apply_btn = std::make_shared<Button>("Apply", [this, callback]() {
-        AdvancedFilter filter;
-        auto get_req = [](const auto& min_b, const auto& max_b,
-                          const auto& eq_b) -> FilterRequirement {
-            FilterRequirement req_filter;
-            std::string min_v = min_b->get_value();
-            std::string max_v = max_b->get_value();
-            std::string eq_v = eq_b->get_value();
-            if (!min_v.empty()) {
-                req_filter.min_val = min_v;
-            }
-            if (!max_v.empty()) {
-                req_filter.max_val = max_v;
-            }
-            if (!eq_v.empty()) {
-                req_filter.equals_val = eq_v;
-            }
-            return req_filter;
-        };
-        auto get_text_req = [](const auto& eq_b) -> FilterRequirement {
-            FilterRequirement req_filter;
-            std::string eq_v = eq_b->get_value();
-            if (!eq_v.empty()) {
-                req_filter.equals_val = eq_v;
-            }
-            return req_filter;
-        };
-        filter.id = get_req(id_min, id_max, id_eq);
-        filter.brand = get_text_req(brand_eq);
-        filter.model = get_text_req(model_eq);
-        filter.type = get_text_req(type_eq);
-        filter.status = get_text_req(status_eq);
-        filter.price = get_req(price_min, price_max, price_eq);
-        filter.seats = get_req(seats_min, seats_max, seats_eq);
-        filter.payload = get_req(payload_min, payload_max, payload_eq);
-        filter.rental_code = get_text_req(rental_code_eq);
-
-        callback(filter);
-    });
-    apply_btn->style.bg({40, 120, 60}).fg({255, 255, 255});
-    btn_row->add_child(apply_btn);
-
-    auto spacer = std::make_shared<Spacer>();
-    spacer->fixed_width = 4;
-    spacer->flex = 0;
-    btn_row->add_child(spacer);
-
-    cancel_btn = std::make_shared<Button>("Cancel", [callback]() { callback(std::nullopt); });
-    cancel_btn->style.bg({120, 40, 40}).fg({255, 255, 255});
-    btn_row->add_child(cancel_btn);
-
-    add_child(btn_row);
-}
+using ui_helpers::uiFormatMoney;
+using ui_helpers::process_log_entry;
 
 UI::UI(FleetManager& manager) : manager_(manager) {
     root_ = std::make_shared<VBox>();
@@ -1078,7 +390,6 @@ auto UI::refresh_fleet_list() -> void {
 
         card->add_child(head_row);
 
-        // match specs
         std::string specs_text;
         std::visit(
             [&](const auto& item) {
@@ -1105,7 +416,6 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        // active rental code
         std::string rental_code_str = "Code: None";
         auto rental_code_opt = manager_.getRentalCodeByVehicleId(veh.getId());
         if (rental_code_opt.has_value()) {
@@ -1123,7 +433,6 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        // status text
         std::string stat_str = "Status: [" + veh.getStatusString();
         if (veh.getStatus() == VehicleStatus::Rented) {
             auto hours_opt = manager_.getRentalBilledHours(veh.getId());
@@ -1143,7 +452,6 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        // card body
         auto body_row = std::make_shared<HBox>();
         body_row->fixed_height = 1;
         body_row->flex = 0;
@@ -1156,7 +464,6 @@ auto UI::refresh_fleet_list() -> void {
         rate_lbl->style.fg({180, 180, 180});
         body_row->add_child(rate_lbl);
 
-        // secondary label selection
         int final_display = display_idx;
         if (!search_query.empty()) {
             bool current_matched = false;
@@ -1166,7 +473,6 @@ auto UI::refresh_fleet_list() -> void {
             }
 
             if (!current_matched) {
-                // override matched label
                 if (spec_matched) {
                     final_display = 1;
                 } else if (rental_code_matched) {
@@ -1177,23 +483,23 @@ auto UI::refresh_fleet_list() -> void {
             }
         }
 
-        if (final_display == 1) { // specs
+        if (final_display == 1) { 
             auto spec_lbl = std::make_shared<Label>(specs_text, Size{1, 24});
             spec_lbl->set_highlight_query(search_query);
             spec_lbl->style.fg({180, 180, 180});
             body_row->add_child(spec_lbl);
-        } else if (final_display == 2) { // rental code
+        } else if (final_display == 2) { 
             auto rent_lbl = std::make_shared<Label>(rental_code_str, Size{1, 24});
             rent_lbl->set_highlight_query(search_query);
             rent_lbl->style.fg({180, 180, 180});
             body_row->add_child(rent_lbl);
-        } else if (final_display == 3) { // id
+        } else if (final_display == 3) { 
             auto id_lbl =
                 std::make_shared<Label>("ID: " + std::to_string(veh.getId()), Size{1, 20});
             id_lbl->set_highlight_query(search_query);
             id_lbl->style.fg({180, 180, 180});
             body_row->add_child(id_lbl);
-        } else { // status
+        } else { 
             auto stat_lbl = std::make_shared<Label>(stat_str, Size{1, 25});
             stat_lbl->set_highlight_query(search_query);
             if (stat == VehicleStatus::Available) {
@@ -1222,7 +528,6 @@ auto UI::refresh_fleet_list() -> void {
         left_list_panel_->add_child(empty_lbl);
     }
 
-    // update details
     rebuild_details_panel();
 
     compositor_->trigger_layout();
@@ -1236,10 +541,8 @@ auto UI::select_vehicle(uint32_t vehicle_id) -> void {
     is_loading_logs_ = true;
     trigger_load_logs(vehicle_id);
 
-    // adjust split view
     split_area_->set_split_enabled(true);
 
-    // update card highlights
     for (const auto& child : left_list_panel_->get_children()) {
         auto card = std::dynamic_pointer_cast<VehicleCard>(child);
         if (card != nullptr) {
@@ -1251,10 +554,8 @@ auto UI::select_vehicle(uint32_t vehicle_id) -> void {
         }
     }
 
-    // rebuild details
     rebuild_details_panel();
 
-    // trigger layout
     compositor_->trigger_layout();
 }
 
@@ -1288,7 +589,6 @@ auto UI::rebuild_details_panel() -> void {
         d_id->style.fg({150, 150, 150});
         right_detail_panel_->add_child(d_id);
 
-        // variant details
         std::string specs_text;
         std::visit(
             [&](const auto& item) {
@@ -1314,7 +614,6 @@ auto UI::rebuild_details_panel() -> void {
         d_rate->style.fg({180, 180, 180});
         right_detail_panel_->add_child(d_rate);
 
-        // status label
         auto status_row = std::make_shared<HBox>();
         status_row->fixed_height = 1;
         status_row->flex = 0;
@@ -1335,12 +634,10 @@ auto UI::rebuild_details_panel() -> void {
         sp_dt->flex = 0;
         right_detail_panel_->add_child(sp_dt);
 
-        // history header
         auto logs_header = std::make_shared<Label>("--- Transaction History Logs ---", Size{1, 35});
         logs_header->style.fg({100, 160, 255}).attr(NCSTYLE_BOLD);
         right_detail_panel_->add_child(logs_header);
 
-        // log entries
         auto log_scroll = std::make_shared<ScrollArea>();
         log_scroll->flex = 1;
         log_scroll->style.bg({20, 20, 22}).pad({0, 1, 0, 1});
@@ -1419,7 +716,6 @@ auto UI::rebuild_details_panel() -> void {
         sp_act->flex = 0;
         right_detail_panel_->add_child(sp_act);
 
-        // context action row
         auto action_row = std::make_shared<HBox>();
         action_row->fixed_height = 1;
         action_row->flex = 0;
@@ -1572,7 +868,6 @@ auto UI::update_stats() -> void {
     maint_stat_->set_text("Maintenance: " + std::to_string(maint));
 }
 
-// async triggers
 
 auto UI::trigger_load_fleet() -> void {
     loading_overlay_ = std::make_shared<LoadingOverlay>("Loading Fleet DB...");
@@ -1751,7 +1046,6 @@ auto UI::trigger_load_logs(uint32_t vehicle_id) -> void {
         res.type = AsyncTaskType::LoadLogs;
         res.target_id = vehicle_id;
         try {
-            // up to 25 records
             res.logs =
                 this->manager_.getVehicle(vehicle_id).has_value()
                     ? std::unique_ptr<IStorage>(new FileStorage(AppPaths::dataDir().string()))
@@ -1789,7 +1083,6 @@ auto UI::trigger_decommission(uint32_t vehicle_id) -> void {
     });
 }
 
-// process results
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto UI::process_result_queue() -> void {

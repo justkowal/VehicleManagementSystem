@@ -18,7 +18,6 @@ public:
         Validator validator;
     };
 
-    // register an implementation
     static auto add(std::string name,
                     Factory factory,
                     Validator validator = nullptr,
@@ -70,7 +69,7 @@ public:
     }
 
     [[nodiscard]] static auto contains(const std::string& name) -> bool {
-        return table().count(name) > 0;
+        return table().contains(name);
     }
 
     [[nodiscard]] static auto defaultName() -> const std::string& {
@@ -78,7 +77,6 @@ public:
     }
 
 private:
-    // meyers singleton to avoid static init fiasco
     static auto table() -> std::map<std::string, RegistryEntry>& {
         static std::map<std::string, RegistryEntry> instance;
         return instance;

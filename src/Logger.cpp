@@ -46,7 +46,6 @@ auto Logger::log(LogLevel level, const std::string& message, const std::string& 
         return;
     }
 
-    // Get current time
     auto now = std::chrono::system_clock::now();
     auto time_t_now = std::chrono::system_clock::to_time_t(now);
     std::tm tm_struct{};
@@ -56,7 +55,6 @@ auto Logger::log(LogLevel level, const std::string& message, const std::string& 
     oss << std::put_time(&tm_struct, "%Y-%m-%d %H:%M:%S");
     std::string timestamp = oss.str();
 
-    // Map level to string
     std::string level_str;
     switch (level) {
         case LogLevel::Debug:   level_str = "DEBUG";   break;
@@ -66,14 +64,12 @@ auto Logger::log(LogLevel level, const std::string& message, const std::string& 
         case LogLevel::Fatal:   level_str = "FATAL";   break;
     }
 
-    // Extract file basename
     std::string file_basename = file;
     if (!file.empty()) {
         std::filesystem::path filepath(file);
         file_basename = filepath.filename().string();
     }
 
-    // Format final log line
     std::ostringstream log_line;
     log_line << "[" << timestamp << "] [" << level_str << "] " << message;
     if (!file_basename.empty()) {
@@ -83,7 +79,6 @@ auto Logger::log(LogLevel level, const std::string& message, const std::string& 
 
     std::string log_str = log_line.str();
 
-    // Output destination handling
     if (file_stream_.is_open()) {
         file_stream_ << log_str;
         file_stream_.flush();

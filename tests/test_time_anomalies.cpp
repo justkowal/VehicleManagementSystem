@@ -6,7 +6,6 @@ TEST_CASE("Return handles negative durations from clock adjustments", "[time][an
     auto storage = std::make_unique<MockStorage>();
     auto printer = std::make_unique<MockPrinter>();
 
-    // controllable clock
     std::chrono::system_clock::time_point t0 = std::chrono::system_clock::now();
     std::chrono::system_clock::time_point current = t0;
     auto clock_fn = [&current]() { return current; };
@@ -19,10 +18,8 @@ TEST_CASE("Return handles negative durations from clock adjustments", "[time][an
     auto code = manager.rentVehicle(500, "John", "Doe", "AB123456");
     REQUIRE(code.has_value());
 
-    // move clock back 2h
     current = current - std::chrono::hours(2);
 
-    // return handles negative duration
     bool ok = manager.returnVehicle(code.value());
     REQUIRE(ok == true);
     REQUIRE(manager.getVehicle(500)->getStatus() == VehicleStatus::Available);

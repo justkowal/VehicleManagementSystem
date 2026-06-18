@@ -6,7 +6,6 @@
 TEST_CASE("Rental code generation uniqueness (basic)", "[codegen][stress]") {
     auto storage = std::make_unique<MockStorage>();
     auto printer = std::make_unique<MockPrinter>();
-    auto* raw = storage.get();
 
     FleetManager manager(std::move(storage), std::move(printer));
 

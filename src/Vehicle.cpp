@@ -15,7 +15,7 @@ void validateBrandAndModel(const std::string& brand, const std::string& model_or
         throw ValidationException("Invalid model/type: '" + model_or_type + "'. Must be non-empty, printable ASCII, and cannot contain commas or newlines.");
     }
 }
-} // namespace
+} 
 
 Vehicle::Vehicle(Car car) : storage_(std::move(car)) {
     const auto& car_obj = std::get<Car>(storage_);

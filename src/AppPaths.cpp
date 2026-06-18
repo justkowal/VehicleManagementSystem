@@ -13,7 +13,6 @@
 
 namespace fs = std::filesystem;
 
-// static member definitions
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 fs::path    AppPaths::data_dir_;
 std::string AppPaths::storage_name_;
@@ -22,7 +21,6 @@ std::string AppPaths::printer_device_;
 bool        AppPaths::massive_init_ = false;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
-// internal helpers
 namespace {
 
 constexpr std::string_view DEFAULT_PRINTER_DEVICE = "127.0.0.1:9100";
@@ -31,7 +29,6 @@ auto osError(const std::error_code& err) -> std::string {
     return err.message();
 }
 
-// join strings
 auto join(const std::vector<std::string>& vec, std::string_view sep) -> std::string {
     if (vec.empty()) {
         return "(none)";
@@ -44,7 +41,6 @@ auto join(const std::vector<std::string>& vec, std::string_view sep) -> std::str
     return result;
 }
 
-// trim whitespace
 auto trim(std::string_view str) -> std::string {
     size_t first = str.find_first_not_of(" \t\r\n");
     if (first == std::string_view::npos) {
@@ -54,11 +50,10 @@ auto trim(std::string_view str) -> std::string {
     return std::string(str.substr(first, (last - first + 1)));
 }
 
-} // namespace
+} 
 
-// platform default data directory
 auto AppPaths::platformDefaultDataDir() -> fs::path {
-#if defined(NDEBUG) // release build
+#if defined(NDEBUG) 
     // NOLINTNEXTLINE(concurrency-mt-unsafe) — called once at startup before any threads
     const char* xdg = std::getenv("XDG_DATA_HOME");
     if (xdg != nullptr && xdg[0] != '\0') {
@@ -78,12 +73,11 @@ auto AppPaths::platformDefaultDataDir() -> fs::path {
     }
 
     return fs::current_path() / "data";
-#else  // debug build
+#else  
     return {"data"};
 #endif
 }
 
-// path validation
 auto AppPaths::validateAndCreate(const fs::path& path) -> bool {
     std::error_code err;
 
@@ -105,11 +99,10 @@ auto AppPaths::validateAndCreate(const fs::path& path) -> bool {
         }
     }
 
-    fs::remove(probe, err); // best-effort cleanup
+    fs::remove(probe, err); 
     return true;
 }
 
-// help text
 auto AppPaths::printHelp(const char* prog_name, std::ostream& out_stream) -> void {
     const auto storage_list = StorageRegistry::available();
     const auto printer_list = PrinterRegistry::available();
@@ -154,12 +147,11 @@ auto AppPaths::handleHelp(int argc, char** argv) -> bool {
     return false;
 }
 
-// config file loading
 auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
     const fs::path config_path = fs::current_path() / "vrs.conf";
     std::ifstream file(config_path);
     if (!file.is_open()) {
-        return true; // missing file is not an error
+        return true; 
     }
 
     static const std::regex comment_regex(R"(^\s*(?:#.*)?$)");
@@ -203,14 +195,12 @@ auto AppPaths::loadConfigFile(ConfigArgs& out_args) -> bool {
     return true;
 }
 
-// cli parsing and resolution
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 auto AppPaths::parseSingleArg(std::string_view arg,
                               int& idx,
                               int argc,
                               char** argv,
                               ConfigArgs& out_args) -> bool {
-    // data dir flags
     if (arg == "--local") {
         out_args.data_override = fs::path("data");
         return true;
@@ -231,7 +221,6 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
-    // storage backend flag
     if (arg == "--storage") {
         if (idx + 1 >= argc) {
             LOG_ERROR("--storage requires a backend name.\n"
@@ -248,7 +237,6 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
-    // printer backend flags
     if (arg == "--printer") {
         if (idx + 1 >= argc) {
             LOG_ERROR("--printer requires a backend name.\n"
@@ -285,12 +273,10 @@ auto AppPaths::parseSingleArg(std::string_view arg,
         return true;
     }
 
-    // help flags (handled in handleHelp)
     if (arg == "--help" || arg == "-h") {
         return true;
     }
 
-    // unknown flag
     if (arg.starts_with("-")) {
         LOG_ERROR("Unknown flag: \"" + std::string(arg) + "\"");
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -316,17 +302,14 @@ auto AppPaths::parseCommandLine(int argc,
 auto AppPaths::resolve(int argc, char** argv) -> bool {
     ConfigArgs args{};
 
-    // load config file
     if (!loadConfigFile(args)) {
         return false;
     }
 
-    // parse cli flags
     if (!parseCommandLine(argc, argv, args)) {
         return false;
     }
 
-    // validate storage
     const std::string resolved_storage =
         args.storage_arg.empty() ? StorageRegistry::defaultName() : args.storage_arg;
 
@@ -338,7 +321,6 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         return false;
     }
 
-    // validate printer
     const std::string resolved_printer =
         args.printer_arg.empty() ? PrinterRegistry::defaultName() : args.printer_arg;
 
@@ -350,11 +332,9 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         return false;
     }
 
-    // resolve values
     const fs::path candidate = args.data_override.value_or(platformDefaultDataDir());
     const std::string resolved_device = args.device_arg.empty() ? std::string(DEFAULT_PRINTER_DEVICE) : args.device_arg;
 
-    // run validations
     if (auto err_msg = StorageRegistry::validate(resolved_storage, candidate.string())) {
         LOG_ERROR(*err_msg);
         return false;
@@ -365,12 +345,10 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
         return false;
     }
 
-    // validate directory
     if (!validateAndCreate(candidate)) {
         return false;
     }
 
-    // commit config
     data_dir_       = candidate;
     storage_name_   = resolved_storage;
     printer_name_   = resolved_printer;
@@ -380,7 +358,6 @@ auto AppPaths::resolve(int argc, char** argv) -> bool {
     return true;
 }
 
-// getters
 auto AppPaths::dataDir()       -> const fs::path&   { return data_dir_; }
 auto AppPaths::storageName()   -> const std::string& { return storage_name_; }
 auto AppPaths::printerName()   -> const std::string& { return printer_name_; }

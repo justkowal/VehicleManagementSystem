@@ -105,10 +105,9 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
 
     {
         EscPosPrinter printer(test_file);
-        // create fixed local timestamp
         std::tm tm_struct{};
-        tm_struct.tm_year = 126; // 2026
-        tm_struct.tm_mon = 5;    // June
+        tm_struct.tm_year = 126; 
+        tm_struct.tm_mon = 5;    
         tm_struct.tm_mday = 11;
         tm_struct.tm_hour = 22;
         tm_struct.tm_min = 30;
@@ -126,20 +125,16 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
     file.close();
     std::remove(test_file.c_str());
 
-    // verify renter details and timestamp
     REQUIRE(content.find("Najemca: Jan Kowalski\n") != std::string::npos);
     REQUIRE(content.find("ID: XYZ123456\n") != std::string::npos);
     REQUIRE(content.find("Data: 2026-06-11 22:30:15\n") != std::string::npos);
 
-    // verify esc_disable_hri
     std::string expected_disable_hri = std::string() + char(0x1D) + char(0x48) + char(0x00);
     REQUIRE(content.find(expected_disable_hri) != std::string::npos);
 
-    // verify barcode command
     std::string expected_barcode = std::string() + char(0x1D) + char(0x6B) + char(69) + char(11) + "RENT-ABCD12";
     REQUIRE(content.find(expected_barcode) != std::string::npos);
 
-    // verify barcode is printed after text
     size_t text_pos = content.find("RENT-ABCD12");
     REQUIRE(text_pos != std::string::npos);
     size_t barcode_pos = content.find(expected_barcode);
@@ -147,8 +142,7 @@ TEST_CASE("EscPosPrinter barcode generation and receipt content", "[printer]") {
     REQUIRE(barcode_pos > text_pos);
 }
 
-// mock tcp server
-static void run_mock_printer_server(int port, std::string& out_received) {
+static void run_mock_printer_server(uint16_t port, std::string& out_received) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) return;
 
@@ -160,7 +154,7 @@ static void run_mock_printer_server(int port, std::string& out_received) {
     address.sin_addr.s_addr = inet_addr("127.0.0.1");
     address.sin_port = htons(port);
 
-    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+    if (bind(server_fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)) < 0) {
         close(server_fd);
         return;
     }
@@ -170,13 +164,13 @@ static void run_mock_printer_server(int port, std::string& out_received) {
         return;
     }
 
-    int addrlen = sizeof(address);
-    int new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+    socklen_t addrlen = sizeof(address);
+    int new_socket = accept(server_fd, reinterpret_cast<struct sockaddr*>(&address), &addrlen);
     if (new_socket >= 0) {
         char buffer[4096] = {0};
-        int valread = read(new_socket, buffer, sizeof(buffer) - 1);
+        ssize_t valread = read(new_socket, buffer, sizeof(buffer) - 1);
         if (valread > 0) {
-            out_received = std::string(buffer, valread);
+            out_received = std::string(buffer, static_cast<size_t>(valread));
         }
         close(new_socket);
     }
@@ -185,12 +179,10 @@ static void run_mock_printer_server(int port, std::string& out_received) {
 
 TEST_CASE("EscPosPrinter network transmission and socket mode", "[printer][network]") {
     std::string received;
-    int port = 59123;
+    uint16_t port = 59123;
     
-    // launch mock server
     std::thread server_thread(run_mock_printer_server, port, std::ref(received));
     
-    // let server start
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     {
@@ -200,12 +192,10 @@ TEST_CASE("EscPosPrinter network transmission and socket mode", "[printer][netwo
 
     server_thread.join();
 
-    // verify network payload
     REQUIRE(received.empty() == false);
     REQUIRE(received.find("Ducati Monster") != std::string::npos);
     REQUIRE(received.find("RENT-MOCK99") != std::string::npos);
 
-    // verify printreturn network transmission
     std::string return_received;
     std::thread return_server_thread(run_mock_printer_server, port, std::ref(return_received));
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -240,7 +230,6 @@ TEST_CASE("FleetManager searchFleet across all fields", "[fleet][search]") {
     manager.addVehicle(Vehicle(bike));
     manager.addVehicle(Vehicle(truck));
 
-    // test helper for ui search logic
     auto search_func = [&](const std::string& query) {
         std::string search_query = query;
         std::transform(search_query.begin(), search_query.end(), search_query.begin(),
@@ -339,10 +328,10 @@ TEST_CASE("FleetManager searchFleet with AdvancedFilter", "[fleet][search][advan
     auto printer = std::make_unique<MockPrinter>();
     FleetManager manager(std::move(storage), std::move(printer));
 
-    Car car1{101, "Toyota", "Yaris", 5, 1500, VehicleStatus::Available}; // 15 PLN/h
-    Car car2{102, "Honda", "Civic", 4, 2500, VehicleStatus::Rented};    // 25 PLN/h
-    Truck truck{103, "Volvo", "FH16", 20000, 4500, VehicleStatus::Available}; // 45 PLN/h
-    Bike bike{104, "Giant", "Road Bike", 800, VehicleStatus::Available};   // 8 PLN/h
+    Car car1{101, "Toyota", "Yaris", 5, 1500, VehicleStatus::Available}; 
+    Car car2{102, "Honda", "Civic", 4, 2500, VehicleStatus::Rented};    
+    Truck truck{103, "Volvo", "FH16", 20000, 4500, VehicleStatus::Available}; 
+    Bike bike{104, "Giant", "Road Bike", 800, VehicleStatus::Available};   
 
     manager.addVehicle(Vehicle(car1));
     manager.addVehicle(Vehicle(car2));

@@ -3,10 +3,8 @@
 #include "IPrinter.h"
 #include "PluginRegistry.h"
 
-// printer registry (type alias)
 using PrinterRegistry = PluginRegistry<IPrinter>;
 
-// registers printer at static initialization time
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp,cppcoreguidelines-macro-usage)
 #define REGISTER_PRINTER(name, Type, is_default)                                    \
     static const bool _printer_registered_##Type =                                  \

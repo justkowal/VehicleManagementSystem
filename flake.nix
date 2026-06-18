@@ -13,7 +13,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = pkgs.lib;
 
-        # Check if an Nvidia version is specified via environment variable
+
         nvidiaVersionEnv = builtins.getEnv "NVIDIA_VERSION";
         nvidiaVersion = if nvidiaVersionEnv != "" then nvidiaVersionEnv else null;
 
@@ -38,7 +38,7 @@
         else
           null;
 
-        # Helper to wrap GPU-accelerated applications
+
         wrapGPU = name: exe: pkgs.writeShellScriptBin name ''
           if [ -e /proc/driver/nvidia ] || command -v nvidia-smi >/dev/null 2>&1; then
             if command -v nixGLNvidia >/dev/null 2>&1; then
@@ -63,7 +63,7 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            # TUI & Core Build Tools
+
             notcurses
             ncurses
             pkg-config
@@ -71,13 +71,13 @@
             clang-tools
             nil
 
-            # Diagnostic & Terminal Tools
+
             wrappedKitty
             wrappedGlxinfo
             wrappedGlxgears
             xterm
 
-            # The Hardware Acceleration Bridge
+
             nixgl.packages.${system}.nixGLIntel
             nixgl.packages.${system}.nixGLDefault
           ] ++ lib.optionals (nixGLNvidiaPkg != null) [
@@ -89,7 +89,7 @@
             export IN_NIX_SHELL="1"
             echo "🏎️ Vehicle Management TUI Engine Environment Active"
 
-            # Print active GPU acceleration bridge status
+
             if [ -e /proc/driver/nvidia ] || command -v nvidia-smi >/dev/null 2>&1; then
               if command -v nixGLNvidia >/dev/null 2>&1; then
                 echo "GPU Acceleration Bridge: Configured for NVIDIA (using nixGLNvidia)"

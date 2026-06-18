@@ -118,106 +118,13 @@ private:
     }
 };
 
-class LoadingOverlay : public notui::VBox {
-public:
-    explicit LoadingOverlay(std::string message);
-    ~LoadingOverlay() override = default;
-
-    LoadingOverlay(const LoadingOverlay&) = delete;
-    auto operator=(const LoadingOverlay&) -> LoadingOverlay& = delete;
-    LoadingOverlay(LoadingOverlay&&) = delete;
-    auto operator=(LoadingOverlay&&) -> LoadingOverlay& = delete;
-
-    auto layout(struct ncplane* parent_plane, notui::Point pos, notui::Size size) -> void override;
-    auto destroy_planes() -> void override;
-    auto raise_to_top() -> void override;
-
-private:
-    struct ncplane* backdrop_plane_{nullptr};
-};
-
-class LogsModal : public notui::VBox {
-public:
-    LogsModal(std::string title, const std::vector<Record>& records, std::function<void()> on_close);
-    ~LogsModal() override = default;
-
-    LogsModal(const LogsModal&) = delete;
-    auto operator=(const LogsModal&) -> LogsModal& = delete;
-    LogsModal(LogsModal&&) = delete;
-    auto operator=(LogsModal&&) -> LogsModal& = delete;
-
-    auto layout(struct ncplane* parent_plane, notui::Point pos, notui::Size size) -> void override;
-    auto destroy_planes() -> void override;
-    auto raise_to_top() -> void override;
-
-private:
-    std::shared_ptr<notui::Label> title_label_;
-    std::shared_ptr<notui::ScrollArea> scroll_area_;
-    std::shared_ptr<notui::Button> close_btn_;
-    struct ncplane* backdrop_plane_{nullptr};
-    std::function<void()> on_close_;
-};
-
-class RegisterVehicleModal : public notui::Modal {
-public:
-    RegisterVehicleModal(const std::function<void(std::optional<Vehicle>)>& callback);
-};
-
-class QuickReturnModal : public notui::Modal {
-private:
-    std::shared_ptr<notui::InputBox<std::string>> code_in;
-    std::shared_ptr<notui::InputBox<std::string>> notes_in;
-public:
-    QuickReturnModal(const std::function<void(std::string, std::string)>& callback);
-};
-
-class RentVehicleModal : public notui::Modal {
-private:
-    std::shared_ptr<notui::InputBox<std::string>> name_in;
-    std::shared_ptr<notui::InputBox<std::string>> surname_in;
-    std::shared_ptr<notui::InputBox<std::string>> id_card_in;
-public:
-    RentVehicleModal(const Vehicle& vehicle, const std::function<void(bool, std::string, std::string, std::string)>& callback);
-};
-
-class StatusChangeModal : public notui::Modal {
-private:
-    std::shared_ptr<notui::InputBox<std::string>> notes_in;
-public:
-    StatusChangeModal(std::string title, const std::string& action_details, const std::function<void(bool, std::string)>& callback);
-};
-
-class AdvancedFilterModal : public notui::Modal {
-private:
-    std::shared_ptr<notui::InputBox<std::string>> id_min;
-    std::shared_ptr<notui::InputBox<std::string>> id_max;
-    std::shared_ptr<notui::InputBox<std::string>> id_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> brand_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> model_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> type_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> status_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> price_min;
-    std::shared_ptr<notui::InputBox<std::string>> price_max;
-    std::shared_ptr<notui::InputBox<std::string>> price_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> seats_min;
-    std::shared_ptr<notui::InputBox<std::string>> seats_max;
-    std::shared_ptr<notui::InputBox<std::string>> seats_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> payload_min;
-    std::shared_ptr<notui::InputBox<std::string>> payload_max;
-    std::shared_ptr<notui::InputBox<std::string>> payload_eq;
-
-    std::shared_ptr<notui::InputBox<std::string>> rental_code_eq;
-
-public:
-    AdvancedFilterModal(const AdvancedFilter& current_filter, const std::function<void(std::optional<AdvancedFilter>)>& callback);
-};
+#include "ui/LoadingOverlay.h"
+#include "ui/LogsModal.h"
+#include "ui/RegisterVehicleModal.h"
+#include "ui/QuickReturnModal.h"
+#include "ui/RentVehicleModal.h"
+#include "ui/StatusChangeModal.h"
+#include "ui/AdvancedFilterModal.h"
 
 class VehicleCard : public notui::VBox {
 public:
@@ -253,28 +160,23 @@ private:
     BackgroundWorker worker_;
     TaskResultQueue result_queue_;
 
-    // layout panels
     std::shared_ptr<notui::ScrollArea> left_list_panel_;
     std::shared_ptr<notui::VBox> right_detail_panel_;
     std::shared_ptr<notui::SplitBox> split_area_;
 
-    // top bar inputs
     std::shared_ptr<notui::InputBox<std::string>> search_input_;
     std::shared_ptr<notui::Dropdown> type_filter_;
     std::shared_ptr<notui::Dropdown> status_filter_;
     std::shared_ptr<notui::Dropdown> secondary_info_filter_;
     std::shared_ptr<notui::Button> advanced_filter_btn_;
 
-    // sidebar/details controls
     std::shared_ptr<LoadingOverlay> loading_overlay_;
     
-    // stats labels
     std::shared_ptr<notui::Label> total_stat_;
     std::shared_ptr<notui::Label> avail_stat_;
     std::shared_ptr<notui::Label> rent_stat_;
     std::shared_ptr<notui::Label> maint_stat_;
 
-    // ui state
     std::vector<Vehicle> current_fleet_;
     std::optional<uint32_t> selected_vehicle_id_;
     std::vector<Record> selected_vehicle_logs_;
@@ -289,7 +191,6 @@ private:
     auto update_stats() -> void;
     [[nodiscard]] auto handle_global_shortcuts(const ncinput& nc_input) -> bool;
     
-    // async triggers
     auto trigger_load_fleet() -> void;
     auto trigger_rent(uint32_t vehicle_id, const std::string& name, const std::string& surname, const std::string& id_card) -> void;
     auto trigger_return(uint32_t vehicle_id, const std::string& notes) -> void;
@@ -299,7 +200,6 @@ private:
     auto trigger_load_logs(uint32_t vehicle_id) -> void;
     auto trigger_decommission(uint32_t vehicle_id) -> void;
 
-    // async result handlers
     auto process_result_queue() -> void;
     auto show_alert(const std::string& title, const std::string& message) -> void;
     auto show_confirm_quit() -> void;

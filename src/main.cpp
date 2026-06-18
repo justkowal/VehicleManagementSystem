@@ -32,7 +32,6 @@ auto loadRuntimePlugins(const std::filesystem::path& plugins_path) -> void {
             auto create_fn = reinterpret_cast<CreatorSignature>(dlsym(handle, "create_printer"));
 
             if (create_fn != nullptr) {
-                // Keep the library handle open
                 static std::vector<void*> handles;
                 handles.push_back(handle);
 
@@ -170,12 +169,11 @@ auto getTruckBrandAndModel(uint32_t index) -> BrandModelResult {
     return {brand_entry.brand, model};
 }
 
-} // namespace
+} 
 
 auto main(int argc, char** argv) -> int {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    // Load plugins first so they are registered before help screen or configuration validation
     std::error_code err_code;
     auto exe_path = std::filesystem::read_symlink("/proc/self/exe", err_code);
     if (!err_code) {
@@ -184,12 +182,10 @@ auto main(int argc, char** argv) -> int {
     loadRuntimePlugins(std::filesystem::current_path() / "plugins");
     loadRuntimePlugins(std::filesystem::current_path() / "build/bin/plugins");
 
-    // handle help first
     if (AppPaths::handleHelp(argc, argv)) {
         return EXIT_SUCCESS;
     }
 
-    // resolve and validate config
     if (!AppPaths::resolve(argc, argv)) {
         return EXIT_FAILURE;
     }
@@ -201,7 +197,6 @@ auto main(int argc, char** argv) -> int {
     const std::string printer_name = AppPaths::printerName();
     const std::string printer_dev = AppPaths::printerDevice();
 
-    // populate default fleet on first launch
     {
         auto init_storage = StorageRegistry::create(storage_name, data_path);
         auto current_fleet = init_storage->loadFleet();

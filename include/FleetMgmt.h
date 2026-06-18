@@ -11,7 +11,6 @@
 #include <functional>
 #include <shared_mutex>
 
-// rentalsession definition in Types.h
 
 class FleetManager {
 public:
@@ -63,7 +62,6 @@ private:
     std::unordered_map<std::string, RentalSession> active_rentals_;
     std::function<std::chrono::system_clock::time_point()> now_fn_;
 
-    // mutex protecting fleet data
     mutable std::shared_mutex mutex_;
 
     static auto generateRentalCode() -> std::string;

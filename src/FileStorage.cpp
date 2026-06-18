@@ -11,14 +11,14 @@
 #include <iomanip>
 #include <ctime>
 #include <cmath>
+#include <ranges>
+#include <string_view>
 
 namespace {
-    auto splitString(const std::string& input, char delim) -> std::vector<std::string> {
+    auto splitString(std::string_view input, char delim) -> std::vector<std::string> {
         std::vector<std::string> out;
-        std::string token;
-        std::istringstream iss(input);
-        while (std::getline(iss, token, delim)) {
-            out.push_back(token);
+        for (const auto subrange : input | std::views::split(delim)) {
+            out.emplace_back(subrange.begin(), subrange.end());
         }
         return out;
     }
@@ -269,7 +269,6 @@ auto FileStorage::loadActiveRentals() -> std::unordered_map<std::string, RentalS
     return rentals;
 }
 
-// register file storage
 #include "StorageRegistry.h"
 REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path) -> std::optional<std::string> {
     static const std::regex path_regex(R"(^[^\0]+$)");
@@ -284,7 +283,6 @@ REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path)
         return "Invalid storage path structure.";
     }
 
-    // find closest ancestor
     fs::path ancestor = candidate;
     while (!ancestor.empty() && !fs::exists(ancestor, err)) {
         ancestor = ancestor.parent_path();
@@ -294,7 +292,6 @@ REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path)
         return "Parent path is not reachable or is not a directory.";
     }
 
-    // check write permissions
     const fs::path probe = ancestor / ".vms_write_test_probe";
     {
         std::ofstream test_file(probe);
@@ -302,7 +299,7 @@ REGISTER_STORAGE_WITH_VALIDATOR("file", FileStorage, [](const std::string& path)
             return "No write permission on parent path: " + ancestor.string();
         }
     }
-    fs::remove(probe, err); // clean up
+    fs::remove(probe, err); 
 
     return std::nullopt;
 }, true);

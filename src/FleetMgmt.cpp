@@ -50,7 +50,7 @@ auto isValidRentalCode(const std::string& code) -> bool {
     static const std::regex regex_pattern(R"(^RENT-[A-Z0-9]{6}$)");
     return std::regex_match(code, regex_pattern);
 }
-} // namespace
+} 
 
 FleetManager::FleetManager(std::unique_ptr<IStorage> storage, std::unique_ptr<IPrinter> printer,
                            std::function<std::chrono::system_clock::time_point()> now_fn)
@@ -310,8 +310,7 @@ auto FleetManager::returnVehicle(const std::string& rental_code, int* out_cost,
 
 auto FleetManager::generateRentalCode() -> std::string {
     static const std::string alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    std::random_device rnd;
-    std::mt19937 gen(rnd());
+    static thread_local std::mt19937 gen(std::random_device{}());
     std::uniform_int_distribution<> dis(0, static_cast<int>(alphanum.size()) - 1);
 
     std::string code = "RENT-";

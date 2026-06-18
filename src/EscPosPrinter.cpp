@@ -9,7 +9,6 @@
 #include <array>
 #include <cmath>
 
-// socket includes
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -29,7 +28,6 @@ const std::string ESC_DOUBLE_HW = std::string() + char(0x1D) + char(0x21) + char
 const std::string ESC_NORMAL_TEXT = std::string() + char(0x1D) + char(0x21) + char(0x00);
 const std::string ESC_DISABLE_HRI = std::string() + char(0x1D) + char(0x48) + char(0x00);
 
-// 80mm thermal receipt width
 const int CPL = 48;
 const std::string SEPARATOR = std::string(CPL, '-') + "\n";
 
@@ -45,16 +43,14 @@ const std::string RECEIPT_FOOTER = "\n" + ESC_CENTER +
                                    "Zapraszamy ponownie.\n" +
                                    ESC_FEED_5 + ESC_FULL_CUT;
 
-// pads spaces between left and right
 auto justifyLine(const std::string& left, const std::string& right) -> std::string {
     int spaces = CPL - static_cast<int>(left.length() + right.length());
     if (spaces < 1) {
-        spaces = 1; // Ensure at least 1 space
+        spaces = 1; 
     }
     return left + std::string(static_cast<size_t>(spaces), ' ') + right + "\n";
 }
 
-// converts grosz to decimal string
 auto formatMoney(int amount_grosz, const std::string& suffix = "") -> std::string {
     int zlotys = amount_grosz / 100;
     int groszy = std::abs(amount_grosz % 100);
@@ -66,7 +62,6 @@ auto formatMoney(int amount_grosz, const std::string& suffix = "") -> std::strin
     return oss.str();
 }
 
-// tcp connect and send with 2s timeout
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& payload) -> bool {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -74,7 +69,6 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
         return false;
     }
 
-    // set non-blocking
     int flags = fcntl(sock, F_GETFL, 0); // NOLINT(cppcoreguidelines-pro-type-vararg)
     if (flags >= 0) {
         fcntl(sock, F_SETFL, flags | O_NONBLOCK); // NOLINT(cppcoreguidelines-pro-type-vararg)
@@ -97,7 +91,7 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
             FD_SET(sock, &fdsw); // NOLINT(hicpp-no-assembler,cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 
             struct timeval timeout_val {};
-            timeout_val.tv_sec = 2; // 2s timeout
+            timeout_val.tv_sec = 2; 
             timeout_val.tv_usec = 0;
 
             res = select(sock + 1, nullptr, &fdsw, nullptr, &timeout_val);
@@ -105,20 +99,19 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
                 int err = 0;
                 socklen_t len = sizeof(err);
                 if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len) == 0 && err == 0) {
-                    res = 0; // success
+                    res = 0; 
                 } else {
-                    res = -1; // failed
+                    res = -1; 
                 }
             } else {
-                res = -1; // timeout/error
+                res = -1; 
             }
         } else {
-            res = -1; // error
+            res = -1; 
         }
     }
 
     if (res == 0) {
-        // set blocking
         if (flags >= 0) {
             fcntl(sock, F_SETFL, flags); // NOLINT(cppcoreguidelines-pro-type-vararg)
         }
@@ -130,13 +123,12 @@ auto tryNetworkSend(const std::string& ip_addr, int port, const std::string& pay
     close(sock);
     return false;
 }
-} // namespace
+} 
 
 EscPosPrinter::EscPosPrinter(std::string device_path) : device_path_(std::move(device_path)) {}
 
 auto EscPosPrinter::sendCommand(const std::string& payload) const -> void {
 
-    // check if network address
     static const std::regex address_regex(R"(^([a-zA-Z0-9.-]+):([0-9]+)$)");
     std::smatch match;
     if (std::regex_match(device_path_, match, address_regex)) {
@@ -149,7 +141,6 @@ auto EscPosPrinter::sendCommand(const std::string& payload) const -> void {
         throw PrinterException("Could not connect to network printer at: " + device_path_);
     }
 
-    // fallback to file path
     std::ofstream port(device_path_, std::ios::out | std::ios::binary | std::ios::app);
     if (!port.is_open()) {
         throw PrinterException("Printer offline: " + device_path_);
@@ -244,7 +235,6 @@ auto EscPosPrinter::printReturn(const std::string& vehicle_name, int price_per_h
     sendCommand(payload);
 }
 
-// register escpos
 #include "PrinterRegistry.h"
 REGISTER_PRINTER_WITH_VALIDATOR("escpos", EscPosPrinter, [](const std::string& address) -> std::optional<std::string> {
     if (address.empty()) {

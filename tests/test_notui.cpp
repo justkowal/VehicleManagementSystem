@@ -79,7 +79,7 @@ static void check_checkbox_toggle(Checkbox& checkbox) {
 
 static void check_checkbox_space_key(Checkbox& checkbox) {
     bool change_fired = false;
-    checkbox.on("change", [&](const Event& /*evt*/) { change_fired = true; });
+    checkbox.on("change", [&](const Event&  ) { change_fired = true; });
 
     ncinput input = {};
     input.id = ' ';
@@ -163,7 +163,6 @@ TEST_CASE("TextArea text buffer manipulation", "[textarea]") {
 }
 
 TEST_CASE("Disabled widgets and upstream focus shift / Shift+Tab", "[disabled_state]") {
-    // check disabled inputs block actions
     SECTION("Disabled Button stops click action") {
         bool clicked = false;
         auto btn = std::make_shared<Button>("Test", [&]() { clicked = true; });
@@ -201,7 +200,6 @@ TEST_CASE("Disabled widgets and upstream focus shift / Shift+Tab", "[disabled_st
         REQUIRE(ib->get_value() == ""); // NOLINT(cppcoreguidelines-avoid-do-while)
     }
 
-    // check focus navigation and shifting
     SECTION("FocusManager navigation and automatic upstream focus shifting") {
         auto root = std::make_shared<VBox>();
         auto btn1 = std::make_shared<Button>("Btn1", []() {});
@@ -215,30 +213,23 @@ TEST_CASE("Disabled widgets and upstream focus shift / Shift+Tab", "[disabled_st
         FocusManager fm;
         fm.rebuild(*root);
 
-        // all should be focusable
         auto focusables = fm.get_focusable_widgets();
         REQUIRE(focusables.size() == 3); // NOLINT(cppcoreguidelines-avoid-do-while)
 
-        // first focused by default
         REQUIRE(fm.focusedWidget() == btn1.get()); // NOLINT(cppcoreguidelines-avoid-do-while)
 
-        // focus_next goes to btn2
         fm.focus_next();
         REQUIRE(fm.focusedWidget() == btn2.get()); // NOLINT(cppcoreguidelines-avoid-do-while)
 
-        // focus_next goes to btn3
         fm.focus_next();
         REQUIRE(fm.focusedWidget() == btn3.get()); // NOLINT(cppcoreguidelines-avoid-do-while)
 
-        // focus_prev goes to btn2
         fm.focus_prev();
         REQUIRE(fm.focusedWidget() == btn2.get()); // NOLINT(cppcoreguidelines-avoid-do-while)
 
-        // shift focus upstream on disable
         btn2->set_disabled(true);
         REQUIRE(fm.focusedWidget() == btn1.get()); // NOLINT(cppcoreguidelines-avoid-do-while)
 
-        // ensure btn2 no longer focusable
         auto focusables_new = fm.get_focusable_widgets();
         REQUIRE(focusables_new.size() == 2); // NOLINT(cppcoreguidelines-avoid-do-while)
         REQUIRE(focusables_new[0] == btn1.get()); // NOLINT(cppcoreguidelines-avoid-do-while)

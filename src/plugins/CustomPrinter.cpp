@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <iostream>
 
-// Concrete plugin implementation matching your polymorphic architecture
 class CustomPrinterPlugin : public IPrinter {
   public:
     explicit CustomPrinterPlugin(std::string filepath) : filepath_(std::move(filepath)) {
@@ -51,7 +50,6 @@ class CustomPrinterPlugin : public IPrinter {
     std::string filepath_;
 };
 
-// Establish stable, un-mangled factory function symbol addresses
 extern "C" {
 auto create_printer(const char* filepath) -> IPrinter* {
     return new CustomPrinterPlugin(filepath != nullptr ? filepath : "");
