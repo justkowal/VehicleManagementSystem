@@ -10,7 +10,10 @@ Checks: >
   -cppcoreguidelines-avoid-magic-numbers,
   -readability-magic-numbers,
   -clang-analyzer-cplusplus.NewDeleteLeaks,
-  -clang-analyzer-*
+  -clang-analyzer-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-designated-initializers,
+  -modernize-use-ranges
 
 WarningsAsErrors: >
   bugprone-*,
@@ -19,3 +22,4 @@ WarningsAsErrors: >
 
 HeaderFilterRegex: '^.*/(src|include)/.*'
 FormatStyle: file
+SystemHeaders: false
