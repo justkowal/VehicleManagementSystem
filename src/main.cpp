@@ -86,7 +86,8 @@ const std::vector<CarBrandModels> CAR_BRANDS = {
     {"Nissan", {"Sentra", "Altima", "Rogue", "Leaf", "GT-R", "Pathfinder", "Versa", "Murano", "Maxima", "Frontier"}},
     {"Mazda", {"Mazda3", "Mazda6", "CX-5", "CX-30", "CX-9", "MX-5 Miata", "CX-50"}},
     {"Subaru", {"Impreza", "Legacy", "Outback", "Forester", "Crosstrek", "WRX", "BRZ", "Ascent"}},
-    {"Lexus", {"IS", "ES", "RX", "NX", "LC", "LS", "GX", "UX"}}
+    {"Lexus", {"IS", "ES", "RX", "NX", "LC", "LS", "GX", "UX"}},
+    {"Volvo", {"S60", "V90", "XC90", "XC60", "S90", "XC40", "C40", "EX90"}}
 };
 
 const std::vector<BikeBrandTypes> BIKE_BRANDS = {
@@ -203,8 +204,8 @@ auto main(int argc, char** argv) -> int {
         if (current_fleet.empty()) {
             if (AppPaths::massiveInit()) {
                 std::vector<Vehicle> massive_fleet;
-                massive_fleet.reserve(10000);
-                for (uint32_t i = 1; i <= 10000; ++i) {
+                massive_fleet.reserve(1000);
+                for (uint32_t i = 1; i <= 1000; ++i) {
                     uint32_t type_selector = i % 3;
                     if (type_selector == 0) {
                         Car car{};

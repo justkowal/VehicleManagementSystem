@@ -123,7 +123,7 @@ auto AppPaths::printHelp(const char* prog_name, std::ostream& out_stream) -> voi
         << "  --printer-device <addr>   Device address / path (default: "
         <<                               DEFAULT_PRINTER_DEVICE << ")\n"
         << "\nOther:\n"
-        << "  --massive-init            Create a massive initial database of 10,000 vehicles if empty\n"
+        << "  --massive-init            Create a massive initial database of 1,000 vehicles if empty\n"
         << "  --help, -h                Show this message\n"
         << "\nData directory (default):\n"
 #if defined(NDEBUG)
