@@ -44,41 +44,60 @@ This separation strictly isolates the core business logic from the mess of termi
 graph TD
     classDef default fill:#1e1e24,stroke:#333,stroke-width:1px,color:#fff;
     classDef primary fill:#2a4494,stroke:#4a6cd4,stroke-width:2px,color:#fff;
-    classDef secondary fill:#2d3748,stroke:#4a5568,stroke-width:1px,color:#cbd5e0;
+    classDef interface fill:#b56a1b,stroke:#e69c24,stroke-width:1.5px,color:#fff;
     classDef plugin fill:#4a2c5c,stroke:#8f3bb8,stroke-width:1.5px,color:#fff;
     classDef ext fill:#1b4d3e,stroke:#2d8a68,stroke-width:1px,color:#fff;
 
-    subgraph UserInterface ["Presentation Layer (TUI)"]
-        UI[UI Module]:::primary
+    subgraph UserInterface ["Presentation Layer (TUI Thread)"]
+        UI[UI Module / Main Loop]:::primary
         notui[notui Layout Engine]:::primary
         notcurses[notcurses Lib]:::ext
     end
 
-    subgraph CoreEngine ["Core Business Logic (rental_engine)"]
+    subgraph CoreEngine ["Core Business Logic"]
         FM[FleetManager]:::default
         VEH[Vehicle Variant Models]:::default
-        FS[FileStorage]:::default
+    end
+
+    subgraph Abstractions ["Abstract Interface Registry Layer"]
+        IS[IStorage Interface]:::interface
+        IP[IPrinter Interface]:::interface
         SR[StorageRegistry]:::default
         PR[PrinterRegistry]:::default
     end
 
-    subgraph Extensibility ["Plugin Extension Layer"]
-        CPPlugin[custom_printer_plugin.so]:::plugin
+    subgraph Adapters ["Adapters & Implementations"]
+        subgraph Static ["Static (Compiled-In)"]
+            FS[FileStorage]:::default
+            EP[EscPosPrinter]:::default
+        end
+        subgraph Dynamic ["Dynamic (Runtime Plugins)"]
+            DSP[Storage Plugins .so]:::plugin
+            DPP[Printer Plugins .so]:::plugin
+        end
     end
 
     UI -->|Manages layout via| notui
     notui -->|Draws on| notcurses
     
-    UI -->|Interacts with| FM
-    FM -->|Manages state of| VEH
-    FM -->|Reads/Writes via| FS
-    FM -->|Resolves backends| SR
-    FM -->|Prints via| PR
+    UI <==|Interacts with (State & Events)|=> FM
+    FM -->|Manages| VEH
     
-    CPPlugin -.->|Registered into at runtime| PR
+    FM -->|State Persistence via| IS
+    FM -->|Receipt Printing via| IP
+    
+    IS -.->|Resolved by| SR
+    IP -.->|Resolved by| PR
+    
+    FS -->|Implements| IS
+    EP -->|Implements| IP
+    
+    DSP -.->|Registers dynamically to| SR
+    DPP -.->|Registers dynamically to| PR
 
     class UI,notui primary;
-    class CPPlugin plugin;
+    class IS,IP interface;
+    class DSP,DPP plugin;
     class notcurses ext;
 ```
 
