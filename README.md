@@ -80,7 +80,7 @@ graph TD
     UI -->|Manages layout via| notui
     notui -->|Draws on| notcurses
     
-    UI <==|Interacts with (State & Events)|=> FM
+    UI <-->|Interacts with (State & Events)| FM
     FM -->|Manages| VEH
     
     FM -->|State Persistence via| IS
