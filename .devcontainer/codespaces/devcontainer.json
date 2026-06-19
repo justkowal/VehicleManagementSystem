@@ -1,0 +1,39 @@
+{
+    "name": "Vehicle Management TUI Engine (Codespaces)",
+    "build": {
+        "dockerfile": "../Dockerfile"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/nix:1": {
+            "extraNixConfig": "experimental-features = nix-command flakes\ntrusted-users = root vscode\nsubstituters = https://cache.nixos.org https://justkowal.cachix.org\ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= justkowal.cachix.org-1:kR+e568Wp7Q/fS51/7+9r8U4W3e+9r8U4W3e/7/pQfS61="
+        }
+    },
+    "runArgs": [
+        "--device=/dev/dri"
+    ],
+    "postCreateCommand": "sudo mkdir -p /etc/nix && printf 'experimental-features = nix-command flakes\\ntrusted-users = root vscode\\nsubstituters = https://cache.nixos.org https://justkowal.cachix.org\\ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= justkowal.cachix.org-1:kR+e568Wp7Q/fS51/7+9r8U4W3e+9r8U4W3e/7/pQfS61=\\n' | sudo tee /etc/nix/nix.conf > /dev/null && sudo dbus-uuidgen --ensure=/etc/machine-id && direnv allow",
+    "userEnvProbe": "loginShell",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.formatOnSave": true,
+                "C_Cpp.clang_format_style": "file",
+                "C_Cpp.clang_format_fallbackStyle": "Google",
+                "workbench.colorTheme": "Catppuccin Mocha",
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "nix.enableLanguageServer": true,
+                "nix.serverPath": "nil"
+            },
+            "extensions": [
+                "Catppuccin.catppuccin-vsc",
+                "xaver.clang-format",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-vscode.cpptools-extension-pack",
+                "eamodio.gitlens",
+                "zaaack.markdown-editor",
+                "jnoortheen.nix-ide",
+                "mkhl.direnv"
+            ]
+        }
+    }
+}

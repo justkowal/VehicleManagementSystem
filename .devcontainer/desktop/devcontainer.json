@@ -1,7 +1,7 @@
 {
-    "name": "Vehicle Management TUI Engine",
+    "name": "Vehicle Management TUI Engine (Linux Desktop)",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "../Dockerfile"
     },
     "features": {
         "ghcr.io/devcontainers/features/nix:1": {
