@@ -1,6 +1,9 @@
 # Build directories
 build*/
 *install/
+CMakeFiles/
+CMakeCache.txt
+Testing/
 
 # Dependencies / cache / tooling
 .cache/
@@ -36,3 +39,6 @@ test_notcurses.cpp
 VehicleManagementSystem-*.zip
 
 _deps
+VehicleManagementSystem.zip
+setup_docker.sh
+setup_docker.sh

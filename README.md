@@ -1,42 +1,41 @@
 <p align="center">
   <a href="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/ci.yml">
-    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline Status"/>
+    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/ci.yml/badge.svg" alt="CI Status"/>
   </a>
   <a href="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/stress.yml">
-    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/stress.yml/badge.svg" alt="Thread Stress Tests"/>
+    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/stress.yml/badge.svg" alt="Stress Tests"/>
   </a>
   <a href="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/release.yml">
-    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/release.yml/badge.svg" alt="Automated CD Deployment"/>
+    <img src="https://github.com/justkowal/VehicleManagementSystem/actions/workflows/release.yml/badge.svg" alt="Release CD"/>
   </a>
-  <img src="https://img.shields.io/github/v/release/justkowal/VehicleManagementSystem?color=9400D3&style=flat-square" alt="Latest Stable Version"/>
+  <img src="https://img.shields.io/github/v/release/justkowal/VehicleManagementSystem?color=9400D3&style=flat-square" alt="Latest Release"/>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Language-C%2B%2B20-00599C?style=flat-square&logo=cplusplus&logoColor=white" alt="ISO C++20 Standard Enforced"/>
-  <img src="https://img.shields.io/badge/Build%20System-CMake%20Presets%20v6-064F8C?style=flat-square&logo=cmake&logoColor=white" alt="CMake Presets Configuration"/>
-  <img src="https://img.shields.io/badge/Static%20Analysis-Clang--Tidy-8F05F5?style=flat-square&logo=llvm" alt="Clang-Tidy Rules Active"/>
-  <img src="https://img.shields.io/badge/Code%20Style-Clang--Format-8F05F5?style=flat-square&logo=llvm" alt="Clang-Format Style Enforced"/>
-  <img src="https://img.shields.io/badge/Test%20Harness-Catch2-orange?style=flat-square" alt="Catch2 Unit Testing Framework"/>
-  <img src="https://img.shields.io/badge/Packages-DEB%20%7C%20RPM%20%7C%20TGZ-brightgreen?style=flat-square&logo=cmake" alt="CPack Distribution Formats Ready"/>
+  <img src="https://img.shields.io/badge/Language-C%2B%2B20-00599C?style=flat-square&logo=cplusplus&logoColor=white" alt="C++20"/>
+  <img src="https://img.shields.io/badge/Build%20System-CMake%20Presets-064F8C?style=flat-square&logo=cmake&logoColor=white" alt="CMake Presets"/>
+  <img src="https://img.shields.io/badge/Static%20Analysis-Clang--Tidy-8F05F5?style=flat-square&logo=llvm" alt="Clang-Tidy"/>
+  <img src="https://img.shields.io/badge/Code%20Style-Clang--Format-8F05F5?style=flat-square&logo=llvm" alt="Clang-Format"/>
+  <img src="https://img.shields.io/badge/Test%20Harness-Catch2-orange?style=flat-square" alt="Catch2"/>
+  <img src="https://img.shields.io/badge/Packages-DEB%20%7C%20RPM%20%7C%20TGZ-brightgreen?style=flat-square&logo=cmake" alt="CPack"/>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Lines%20of%20Code-9322-blueviolet?style=flat-square" alt="Total Code Volume Lines"/>
-  <img src="https://img.shields.io/github/repo-size/justkowal/VehicleManagementSystem?style=flat-square&color=orange" alt="Disk Footprint on GitHub"/>
-  <img src="https://img.shields.io/github/last-commit/justkowal/VehicleManagementSystem?style=flat-square&color=brightgreen" alt="Active Maintenance Telemetry"/>
-  <img src="https://img.shields.io/badge/AGH%20University-PL--II%20Project-7D2232?style=flat-square" alt="AGH University Programming Languages II Laboratory Track"/>
+  <img src="https://img.shields.io/badge/Lines%20of%20Code-9322-blueviolet?style=flat-square" alt="Lines of Code"/>
+  <img src="https://img.shields.io/github/repo-size/justkowal/VehicleManagementSystem?style=flat-square&color=orange" alt="Repo Size"/>
+  <img src="https://img.shields.io/github/last-commit/justkowal/VehicleManagementSystem?style=flat-square&color=brightgreen" alt="Last Commit"/>
+  <img src="https://img.shields.io/badge/AGH%20University-PL--II%20Project-7D2232?style=flat-square" alt="AGH University Project"/>
 </p>
 
 ---
-
 
 # Vehicle Management System
 
 ## Overview
 
-The Vehicle Management System is a C++ app built with a big focus on decoupling, thread safety and modularity. Instead of using standard terminal interfaces that mix domain logic with console output, this project brings in `notui` - a custom abstract layout rendering framework built on top of the `notcurses` library.
+The Vehicle Management System is a C++20 application designed with a focus on separation of concerns, thread safety, and modularity. Instead of standard console interfaces that bundle business logic with text output, this system uses `notui` - a custom terminal layout engine built on top of the `notcurses` library.
 
-This separation strictly isolates the core business logic from the mess of terminal I/O. By treating the UI as its own separate rendering target, the app is much easier to test and maintain, and its open to future extensions without breaking the underlying state management.
+This design decouples core fleet management logic from terminal I/O, improving testability and facilitating future interface extensions.
 
 ## System Architecture
 
@@ -101,44 +100,50 @@ graph LR
     class notcurses ext;
 ```
 
-## Key Architectural Highlights
+## Key Architectural Features
 
-### Custom UI Engine (notui)
-Instead of hardcoding UI coordinates and doing manual redraws, the project uses a component-driven terminal rendering tree. It uses declarative layout managers like `VBox`, `HBox`, and `SplitBox` to automatically handle terminal resizing and widget placement. Also, an interactive state machine (`FocusManager`) safely passes keyboard and mouse events down the active widget tree, preventing messy coupling between the input loop and the domain models.
+### Declarative UI (notui)
+Uses a tree of UI components layout-managed via `VBox`, `HBox`, and `SplitBox` to automatically handle terminal resizing. User inputs (keyboard and mouse) are handled by a `FocusManager` that dispatches events down the active widget tree.
 
-### Transactional State & Exception Safety
-Since data integrity is super important in management software, all mutating operations in the system follow the Strong Exception Guarantee. When a user or system process modifies a record, the operations are done on local memory copies first. The system writes these changes out to disk before committing them to active memory. If any part of the operation fails, the system rolls back cleanly without corrupting the live app state.
+### Exception Safety & Transactional State
+Ensures data integrity via strong exception guarantees. Mutating operations are performed on local memory copies and successfully persisted to disk before committing to active memory, rolling back cleanly upon failure.
 
-### Concurrent Optimization
-To make sure the UI stays responsive during background tasks or large data queries, the system uses a C++17 multiple-readers, single-writer concurrency pattern with `std::shared_mutex`. This lets non-blocking, parallel UI render sweeps read fleet data concurrently. At the same time it safely blocks and queues mutations, ensuring thread safe reads without the usual performance bottlenecks of exclusive locking.
+### Concurrency Model
+Maintains a responsive UI by using a readers-writer lock (`std::shared_mutex`). UI rendering threads read fleet data concurrently, while mutations are blocked and queued to ensure thread safety without unnecessary bottlenecks.
 
-### Runtime Dynamic Plugins
-The architecture avoids a huge monolithic binary by using a decoupled Abstract Factory and Service Locator pattern. The system actively scans its directories and can hot-swap dynamic libraries (`.so` MODULE targets) at runtime. This means new vehicle types, logging sinks, or reporting modules can be injected and used by the app without requiring a full re-compilation or re-linking of the main core.
+### Dynamic Plugin System
+Supports runtime extensibility using a Service Locator pattern. The system scans designated folders to dynamically load and register dynamic storage or printing implementations (`.so` targets) without needing to rebuild the core application.
 
-## Dev-Ops & Build Infrastructure
+## Build & CI/CD
 
-The project is wrapped in a solid DevOps ecosystem to ensure reliable builds and deployments.
-
-- Modern Build Orchestration - Uses native CMake Workflow Presets (Version 6) to provide a unified, reproducible build pipeline.
-- Reproducible Dev Environments - Configured with a locked Nix Flake (`flake.nix`) and VS Code Devcontainer integration. This guarantees compilers, system libraries (like `notcurses`), and toolchains are pinned exactly the same for anyone, anywhere, without cluttering your global OS packages.
-- Continuous Integration - Backed by GitHub Actions workflows that handle continuous integration, rigorous thread stress-testing, and automated Release packaging when you tag commits.
-- Automated Distribution - Uses CPack configuration, enabling effortless compilation and packaging into standalone installers (like DEB or RPM) for end users. There is no manual steps needed.
+- **CMake Presets** - Native CMake Workflow Presets provide standard configuration, build, and installation tasks.
+- **Reproducible Environments** - Includes a `flake.nix` (Nix Flake) pinning the required C++ toolchain, libraries (e.g., `notcurses`) and development utilities (e.g. `escpresso`, `kitty`).
+- **GitHub Actions** - CI workflows run builds, static analysis (Clang-Tidy), formatting checks (Clang-Format), thread stress tests, and automate CD release packaging.
+- **Distribution Packages** - Integrated CPack configuration packages the compiled application into DEB, RPM, or TGZ formats.
 
 ## Getting Started
 
-Building and testing the app is heavily standardized through the provided CMake presets.
+### 0. Nix Development Environment (Recommended)
+To run within the pinned dev shell containing the complete C++20 toolchain (GCC, CMake, `notcurses`, `clang-tools`, and GPU-dependent utilities like `escpresso` or `kitty`):
+```bash
+nix develop --impure
+```
+*Note: The `--impure` flag is required because of GPU bridging/nixGL runtime detection. The included `escpresso` utility can be used to view and verify ESC/POS printer output.*
 
-To configure, build, and locally install the main app run
+### 1. Build and Install the App
+To configure, build, and install the application using standard CMake presets:
 ```bash
 cmake --workflow --preset install-app
 ```
 
-If your developing dynamic plugins and want to hot-compile them while the main app is running
+### 2. Build and Install Plugins (Optional)
+To build and install the dynamic library plugins:
 ```bash
 cmake --workflow --preset install-plugin
 ```
 
-To run the unit tests and verify the concurrency guarantees
+### 3. Run Tests
+To run unit tests (including concurrency checks):
 ```bash
 ./build/bin/UnitTests
 ```

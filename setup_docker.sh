@@ -94,7 +94,15 @@ if command -v nvidia-smi &> /dev/null || (command -v lspci &> /dev/null && lspci
     HAS_NVIDIA=true
 fi
 
-mkdir -p .devcontainer
+mkdir -p .devcontainer/desktop
+
+# Grant X11 access to local Docker containers (required for MIT-MAGIC-COOKIE on RPi OS)
+if command -v xhost &> /dev/null && [ -n "$DISPLAY" ]; then
+    xhost +local:docker > /dev/null 2>&1
+    echo "[✓] X11 access granted to local Docker containers."
+else
+    echo "[ ] X11 access: skipped (no DISPLAY or xhost unavailable)."
+fi
 
 if [ "$HAS_NVIDIA" = true ]; then
     if ! command -v nvidia-container-toolkit &> /dev/null; then
@@ -116,12 +124,17 @@ if [ "$HAS_NVIDIA" = true ]; then
         echo "[✓] NVIDIA Container Toolkit verified."
     fi
 
+    # Add user to render group for GPU access
+    if ! getent group render | grep -q "\b$USER\b" 2>/dev/null; then
+        echo "[ ] User '$USER' not in 'render' group (optional, for /dev/dri/renderD128 access)."
+    fi
+
     echo -n "[ ] Writing NVIDIA-optimized devcontainer.json... "
-    cat << 'EOF' > .devcontainer/devcontainer.json
+    cat << 'EOF' > .devcontainer/desktop/devcontainer.json
 {
-    "name": "Vehicle Management TUI Engine",
+    "name": "Vehicle Management TUI Engine (Linux Desktop)",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "../Dockerfile"
     },
     "features": {
         "ghcr.io/devcontainers/features/nix:1": {
@@ -131,10 +144,14 @@ if [ "$HAS_NVIDIA" = true ]; then
     "runArgs": [
         "--net=host",
         "--gpus=all",
-        "-e", "DISPLAY=${localEnv:DISPLAY}"
+        "--group-add", "render",
+        "--group-add", "video",
+        "-e", "DISPLAY=${localEnv:DISPLAY}",
+        "-e", "XAUTHORITY=/tmp/.docker.xauth"
     ],
     "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+        "source=${localEnv:XAUTHORITY},target=/tmp/.docker.xauth,type=bind,readonly"
     ],
     "ipc": "host",
     "postCreateCommand": "sudo mkdir -p /etc/nix && echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf > /dev/null && sudo dbus-uuidgen --ensure=/etc/machine-id && direnv allow",
@@ -184,11 +201,11 @@ else
     fi
 
     echo -n "[ ] Writing Render-optimized devcontainer.json... "
-    cat << 'EOF' > .devcontainer/devcontainer.json
+    cat << 'EOF' > .devcontainer/desktop/devcontainer.json
 {
-    "name": "Vehicle Management TUI Engine",
+    "name": "Vehicle Management TUI Engine (Linux Desktop)",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "../Dockerfile"
     },
     "features": {
         "ghcr.io/devcontainers/features/nix:1": {
@@ -198,10 +215,15 @@ else
     "runArgs": [
         "--net=host",
         "--device=/dev/dri",
-        "-e", "DISPLAY=${localEnv:DISPLAY}"
+        "--device=/dev/dri/renderD128",
+        "--group-add", "render",
+        "--group-add", "video",
+        "-e", "DISPLAY=${localEnv:DISPLAY}",
+        "-e", "XAUTHORITY=/tmp/.docker.xauth"
     ],
     "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+        "source=${localEnv:XAUTHORITY},target=/tmp/.docker.xauth,type=bind,readonly"
     ],
     "ipc": "host",
     "postCreateCommand": "sudo mkdir -p /etc/nix && echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf > /dev/null && sudo dbus-uuidgen --ensure=/etc/machine-id && direnv allow",

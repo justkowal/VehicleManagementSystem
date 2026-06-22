@@ -11,10 +11,15 @@
     "runArgs": [
         "--net=host",
         "--device=/dev/dri",
-        "-e", "DISPLAY=${localEnv:DISPLAY}"
+        "--device=/dev/dri/renderD128",
+        "--group-add", "render",
+        "--group-add", "video",
+        "-e", "DISPLAY=${localEnv:DISPLAY}",
+        "-e", "XAUTHORITY=/tmp/.docker.xauth"
     ],
     "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+        "source=${localEnv:XAUTHORITY},target=/tmp/.docker.xauth,type=bind,readonly"
     ],
     "ipc": "host",
     "postCreateCommand": "sudo mkdir -p /etc/nix && printf 'experimental-features = nix-command flakes\\ntrusted-users = root vscode\\nsubstituters = https://cache.nixos.org https://justkowal.cachix.org\\ntrusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= justkowal.cachix.org-1:kR+e568Wp7Q/fS51/7+9r8U4W3e+9r8U4W3e/7/pQfS61=\\n' | sudo tee /etc/nix/nix.conf > /dev/null && sudo dbus-uuidgen --ensure=/etc/machine-id && direnv allow",
